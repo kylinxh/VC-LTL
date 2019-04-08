@@ -14,6 +14,7 @@
 #include <corecrt_internal_mbstring.h>
 #include <mbstring.h>
 #include <stddef.h>
+#include <msvcrt_IAT.h>
 
 /***
 *_mbsninc - Increment MBCS string pointer by specified char count.
@@ -35,7 +36,8 @@
 *
 *******************************************************************************/
 
-extern "C" unsigned char * __cdecl _mbsninc_l(
+#ifdef _ATL_XP_TARGETING
+extern "C" unsigned char * __cdecl _mbsninc_l_downlevel(
         const unsigned char *string,
         size_t ccnt,
         _locale_t plocinfo
@@ -47,10 +49,14 @@ extern "C" unsigned char * __cdecl _mbsninc_l(
     return const_cast<unsigned char*>(string) + (unsigned int)_mbsnbcnt_l(string, ccnt, plocinfo);
 }
 
-//extern "C" unsigned char * (__cdecl _mbsninc)(
-//        const unsigned char *string,
-//        size_t ccnt
-//        )
-//{
-//    return _mbsninc_l(string, ccnt, nullptr);
-//}
+_LCRT_DEFINE_IAT_SYMBOL(_mbsninc_l_downlevel);
+
+#endif
+
+/*extern "C" unsigned char * (__cdecl _mbsninc)(
+        const unsigned char *string,
+        size_t ccnt
+        )
+{
+    return _mbsninc_l(string, ccnt, nullptr);
+}*/

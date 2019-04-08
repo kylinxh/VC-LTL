@@ -13,6 +13,7 @@
 
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 /***
 *unsigned int _mbcjistojms(c) - Converts JIS code to Microsoft Kanji Code.
@@ -34,14 +35,14 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned int __cdecl _mbcjistojms_l(
+extern "C" unsigned int __cdecl _mbcjistojms_l_downlevel(
         unsigned int c,
         _locale_t plocinfo
     )
 {
         unsigned int h, l;
         //_LocaleUpdate _loc_update(plocinfo);
-		
+
         if ((plocinfo ? plocinfo->mbcinfo->mbcodepage : _getmbcp()) != _KANJI_CP)
             return (c);
 
@@ -66,14 +67,16 @@ extern "C" unsigned int __cdecl _mbcjistojms_l(
             h += 0x40;
         return (h << 8) | l;
 }
-#endif
 
-//extern "C" unsigned int (__cdecl _mbcjistojms)(
-//    unsigned int c
-//    )
-//{
-//    return _mbcjistojms_l(c, nullptr);
-//}
+_LCRT_DEFINE_IAT_SYMBOL(_mbcjistojms_l_downlevel);
+
+#endif
+/*extern "C" unsigned int (__cdecl _mbcjistojms)(
+    unsigned int c
+    )
+{
+    return _mbcjistojms_l(c, nullptr);
+}*/
 
 
 /***
@@ -95,7 +98,7 @@ extern "C" unsigned int __cdecl _mbcjistojms_l(
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned int __cdecl _mbcjmstojis_l(
+extern "C" unsigned int __cdecl _mbcjmstojis_l_downlevel(
         unsigned int c,
         _locale_t plocinfo
         )
@@ -137,11 +140,13 @@ extern "C" unsigned int __cdecl _mbcjmstojis_l(
 
         return c;
 }
-#endif
 
-//extern "C" unsigned int (__cdecl _mbcjmstojis)(
-//        unsigned int c
-//        )
-//{
-//    return _mbcjmstojis_l(c, nullptr);
-//}
+_LCRT_DEFINE_IAT_SYMBOL(_mbcjmstojis_l_downlevel);
+
+#endif
+/*extern "C" unsigned int (__cdecl _mbcjmstojis)(
+        unsigned int c
+        )
+{
+    return _mbcjmstojis_l(c, nullptr);
+}*/

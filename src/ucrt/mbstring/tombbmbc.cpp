@@ -14,6 +14,7 @@
 
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 
 #define ASCLOW   0x20
@@ -220,14 +221,14 @@ static struct   {
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned int __cdecl _mbbtombc_l(
+extern "C" unsigned int __cdecl _mbbtombc_l_downlevel(
         unsigned int c,
         _locale_t plocinfo
         )
 {
     int i;
     //_LocaleUpdate _loc_update(plocinfo);
-	
+
     if ((plocinfo ? plocinfo->mbcinfo->mbcodepage : _getmbcp()) != _KANJI_CP)
         return (c);
 
@@ -257,14 +258,17 @@ extern "C" unsigned int __cdecl _mbbtombc_l(
 
         return(c);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbbtombc_l_downlevel);
+
 #endif
 
-//extern "C" unsigned int (__cdecl _mbbtombc)(
-//    unsigned int c
-//    )
-//{
-//    return _mbbtombc_l(c, nullptr);
-//}
+/*extern "C" unsigned int (__cdecl _mbbtombc)(
+    unsigned int c
+    )
+{
+    return _mbbtombc_l(c, nullptr);
+}*/
 
 /***
 *unsigned int _mbctombb(c) - convert mbcvalue to mbbvalue.
@@ -284,7 +288,7 @@ extern "C" unsigned int __cdecl _mbbtombc_l(
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned int __cdecl _mbctombb_l(
+extern "C" unsigned int __cdecl _mbctombb_l_downlevel(
         unsigned int c,
         _locale_t plocinfo
         )
@@ -323,11 +327,14 @@ extern "C" unsigned int __cdecl _mbctombb_l(
 
     return(c);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbctombb_l_downlevel);
+
 #endif
 
-//extern "C" unsigned int (__cdecl _mbctombb)(
-//    unsigned int c
-//    )
-//{
-//    return _mbctombb_l(c, nullptr);
-//}
+/*extern "C" unsigned int (__cdecl _mbctombb)(
+    unsigned int c
+    )
+{
+    return _mbctombb_l(c, nullptr);
+}*/

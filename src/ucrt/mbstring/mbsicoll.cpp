@@ -15,13 +15,14 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 * _mbsicoll - Collate MBCS strings, ignoring case
 *
 *Purpose:
-*       Collates two strings for lexical order.   Strings
-*       are collated on a character basis, not a byte basis.
+*       Collates two strings for lexical order (ignoring case).
+*       Strings are collated on a character basis, not a byte basis.
 *
 *Entry:
 *       char *s1, *s2 = strings to collate
@@ -36,8 +37,9 @@
 *       Input parameters are validated. Refer to the validation section of the function.
 *
 *******************************************************************************/
+
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _mbsicoll_l(
+extern "C" int __cdecl _mbsicoll_l_downlevel(
         const unsigned char *s1,
         const unsigned char *s2,
         _locale_t plocinfo
@@ -56,7 +58,7 @@ extern "C" int __cdecl _mbsicoll_l(
         if (plocinfo->mbcinfo->ismbcodepage == 0)
             return _stricoll_l((const char *)s1, (const char *)s2, plocinfo);
 
-        if ( 0 == (ret = __crtCompareStringA(
+        if ( 0 == (ret = __acrt_CompareStringA(
                         plocinfo,
                         plocinfo->mbcinfo->mblcid,
                         SORT_STRINGSORT | NORM_IGNORECASE,
@@ -73,12 +75,15 @@ extern "C" int __cdecl _mbsicoll_l(
         return ret - 2;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsicoll_l_downlevel);
+
 #endif
 
-//extern "C" int (__cdecl _mbsicoll)(
-//        const unsigned char *s1,
-//        const unsigned char *s2
-//        )
-//{
-//    return _mbsicoll_l(s1, s2, nullptr);
-//}
+/*extern "C" int (__cdecl _mbsicoll)(
+        const unsigned char *s1,
+        const unsigned char *s2
+        )
+{
+    return _mbsicoll_l(s1, s2, nullptr);
+}*/

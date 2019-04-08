@@ -15,6 +15,7 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include <stddef.h>
+#include <msvcrt_IAT.h>
 
 /***
 *_mbsdec - Move MBCS string pointer backward one charcter.
@@ -35,8 +36,9 @@
 *       Input parameters are validated. Refer to the validation section of the function.
 *
 *******************************************************************************/
+
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned char * __cdecl _mbsdec_l(
+extern "C" unsigned char * __cdecl _mbsdec_l_downlevel(
         const unsigned char *string,
         const unsigned char *current,
         _locale_t plocinfo
@@ -102,12 +104,15 @@ extern "C" unsigned char * __cdecl _mbsdec_l(
 
         return (unsigned char *)(current - 1 - ((current - temp) & 0x01) );
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsdec_l_downlevel);
+
 #endif
 
-//extern "C" unsigned char * (__cdecl _mbsdec)(
-//        const unsigned char *string,
-//        const unsigned char *current
-//        )
-//{
-//    return _mbsdec_l(string, current, nullptr);
-//}
+/*extern "C" unsigned char * (__cdecl _mbsdec)(
+        const unsigned char *string,
+        const unsigned char *current
+        )
+{
+    return _mbsdec_l(string, current, nullptr);
+}*/

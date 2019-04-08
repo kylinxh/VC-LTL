@@ -3,15 +3,13 @@
 <!--
 
 作者：mingkuang
-修改日期：2017-12-17
+修改日期：2018-04-21
 
-此配置能智能适应，当你选择WinXP平台工具集时，将自动切换到XP模式。
-
-不建议直接使用此属性表，建议你复制Shared.props到你的工程。Shared.props会自动加载此属性表。
+单纯做个转发，此文件已经弃用，单纯为了兼容老项目而存在，建议直接使用“VC-LTL helper for Visual Studio.props”。
 
 -->
 
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="VC_LTL_PlatformPrepareForBuild_ltlvcrt">
   <PropertyGroup>
     <!--先判断Sln目录是否已经有了VC-LTL，如果已经存在，那么优先使用本地工程中的VC-LTL-->
     <VC_LTL_Root Condition=" ('$(VC_LTL_Root)'=='') And (Exists('$(SolutionDir)VC-LTL\_msvcrt.h')) ">$(SolutionDir)VC-LTL</VC_LTL_Root>
@@ -20,64 +18,15 @@
     <!--如果还是没有，那么走最极端方案，开启翻滚模式-->
     <VC_LTL_Root Condition=" '$(VC_LTL_Root)'=='' ">..\VC-LTL</VC_LTL_Root>
   </PropertyGroup>
-  
-  <PropertyGroup Condition=" ('$(VCToolsVersion)'=='') And ('$(VC-LTLUsedToolsVersion)'=='') ">
-    <!--计算机已经安装Visual Studio 2015 Update3 KB3165756 ?-->
-    <VC-LTLUsedToolsVersion>$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{4B1849F2-3D49-325F-B997-4AD0BF5B8A09}@DisplayVersion)</VC-LTLUsedToolsVersion>
-    <VC-LTLUsedToolsVersion Condition=" '$(VC-LTLUsedToolsVersion)'=='' ">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{4B1849F2-3D49-325F-B997-4AD0BF5B8A09}@DisplayVersion)</VC-LTLUsedToolsVersion>
 
-    <!--计算机已经安装Visual Studio 2015 Update3 ?-->
-    <VC-LTLUsedToolsVersion Condition=" '$(VC-LTLUsedToolsVersion)'=='' ">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{729FD64C-2AE0-3E25-83A8-A93520DCDE7A}@DisplayVersion)</VC-LTLUsedToolsVersion>
-    <VC-LTLUsedToolsVersion Condition=" '$(VC-LTLUsedToolsVersion)'=='' ">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{729FD64C-2AE0-3E25-83A8-A93520DCDE7A}@DisplayVersion)</VC-LTLUsedToolsVersion>
+  <ImportGroup Condition=" '$(VC_LTL_Root)'!=''">
+    <Import Project="$(VC_LTL_Root)\Config\config.props" Condition="Exists('$(VC_LTL_Root)\Config\config.props')"/>
 
+    <!--兼容模式，尝试加载老版本-->
+    <Import Project="$(VC_LTL_Root)\ltlvcrt.props" Condition="(!Exists('$(VC_LTL_Root)\Config\config.props')) And (Exists('$(VC_LTL_Root)\ltlvcrt.props'))"/>
+  </ImportGroup>
 
-    <!--如果找不到，那么指定为当前支持的最低版本 2015 Update2-->
-    <VC-LTLUsedToolsVersion Condition=" '$(VC-LTLUsedToolsVersion)'=='' ">14.0.23918</VC-LTLUsedToolsVersion>
-  </PropertyGroup>
-  
-  <PropertyGroup Condition=" ('$(VCToolsVersion)'!='') And ('$(VC-LTLUsedToolsVersion)'=='') ">
-    <!--如果目标不存在，这指向为当前VC-LTL支持的最高版本-->
-    <VC-LTLUsedToolsVersion Condition=" !Exists('$(VC_LTL_Root)\VC\$(VCToolsVersion)')" >14.12.25827</VC-LTLUsedToolsVersion>
-    <VC-LTLUsedToolsVersion Condition=" '$(VC-LTLUsedToolsVersion)'==''">$(VCToolsVersion)</VC-LTLUsedToolsVersion>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <VC-LTLTargetUniversalCRTVersion Condition="('$(VC-LTLTargetUniversalCRTVersion)'=='') And (Exists('$(VC_LTL_Root)\ucrt\$(TargetUniversalCRTVersion)'))">$(TargetUniversalCRTVersion)</VC-LTLTargetUniversalCRTVersion>
-    
-    <!--如果遇到VC-LTL不支持的版本则切换到VC-LTL当前最高可用版本-->
-    <VC-LTLTargetUniversalCRTVersion Condition="'$(VC-LTLTargetUniversalCRTVersion)'==''">10.0.16299.0</VC-LTLTargetUniversalCRTVersion>
-  </PropertyGroup>
-  
-  <PropertyGroup>
-    <VC_LTL_Include Condition="'$(VC_LTL_Include)'=='' ">$(VC_LTL_Root)\VC\$(VC-LTLUsedToolsVersion)\include;$(VC_LTL_Root)\VC\$(VC-LTLUsedToolsVersion)\atlmfc\include;$(VC_LTL_Root)\ucrt\$(VC-LTLTargetUniversalCRTVersion)</VC_LTL_Include>
-    <VC_LTL_Library Condition=" '$(VC_LTL_Library)'==''">$(VC_LTL_Root)\$(PlatformShortName);$(VC_LTL_Root)\VC\$(VC-LTLUsedToolsVersion)\lib\$(PlatformShortName);$(VC_LTL_Root)\ucrt\$(VC-LTLTargetUniversalCRTVersion)\lib\$(PlatformShortName)</VC_LTL_Library>
-
-    <msvcrt_winxp_obj Condition=" '$(PlatformShortName)'=='x86' ">msvcrt_winxp.obj</msvcrt_winxp_obj>
-    <msvcrt_winxp_obj Condition=" '$(PlatformShortName)'=='x64' ">msvcrt_win2003.obj</msvcrt_winxp_obj>
-
-    <msvcrt_forward Condition=" ('$(msvcrt_forward)'=='') And ('$(DisableAdvancedSupport)'=='true') ">msvcrt_light.obj</msvcrt_forward>
-    <msvcrt_forward Condition=" '$(msvcrt_forward)'==''">msvcrt_advanced.obj</msvcrt_forward>
-
-    <SupportLTL Condition=" ('$(UseDebugLibraries)'!='true') And ('$(Configuration)'!='Debug') And ( ('$(PlatformShortName)'=='x86') Or ('$(PlatformShortName)'=='x64') )">true</SupportLTL>
-    <SupportWinXP Condition=" ('$(SupportWinXP)'=='') And ( ('$(PlatformToolset)'=='v141_xp') Or ('$(PlatformToolset)'=='v140_xp') )">true</SupportWinXP>
-    
-    <IncludePath Condition=" '$(SupportLTL)'=='true' ">$(VC_LTL_Include);$(IncludePath)</IncludePath>
-    <LibraryPath Condition=" '$(SupportLTL)'=='true' ">$(VC_LTL_Library);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions Condition=" '$(SupportWinXP)'=='true' ">_ATL_XP_TARGETING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition=" '$(SupportLTL)'=='true' ">_NO_CRT_STDIO_INLINE=1;_Build_By_LTL;_DISABLE_DEPRECATE_STATIC_CPPLIB;_STATIC_CPPLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <!--当兼容XP时，对于非 exe 的需要禁用线程安全初始化。避免XP中在DllMain中使用TLS而崩溃-->
-      <AdditionalOptions Condition=" ('$(SupportWinXP)'=='true') And ('$(ConfigurationType)'!='Application') ">/Zc:threadSafeInit- %(AdditionalOptions)</AdditionalOptions>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies Condition=" ('$(SupportLTL)'=='true') And ('$(SupportWinXP)'=='true')">$(msvcrt_winxp_obj);$(msvcrt_forward);ltlxp.lib;vc.lib;ucrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition=" ('$(SupportLTL)'=='true') And ('$(SupportWinXP)'!='true')">$(msvcrt_forward);ltl.lib;vc.lib;ucrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-
-      <MinimumRequiredVersion Condition=" ('$(SupportWinXP)'=='true') And ('$(PlatformShortName)'=='x86') ">5.01</MinimumRequiredVersion>
-      <MinimumRequiredVersion Condition=" ('$(SupportWinXP)'=='true') And ('$(PlatformShortName)'=='x64') ">5.02</MinimumRequiredVersion>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemGroup />
+  <Target Name="VC_LTL_PlatformPrepareForBuild_ltlvcrt">
+    <Warning Code="LTL2100" Text="此文件已经弃用，未来版本随时可能删除。强烈建议直接使用“VC-LTL helper for Visual Studio.props”！！！！"/>
+  </Target>
 </Project>

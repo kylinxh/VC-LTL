@@ -14,6 +14,8 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
+
 
 /***
 * _mbsnbicoll - Collate n bytes of strings, ignoring case (MBCS)
@@ -39,7 +41,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _mbsnbicoll_l(
+extern "C" int __cdecl _mbsnbicoll_l_downlevel(
         const unsigned char *s1,
         const unsigned char *s2,
         size_t n,
@@ -63,7 +65,7 @@ extern "C" int __cdecl _mbsnbicoll_l(
         if (plocinfo->mbcinfo->ismbcodepage == 0)
             return _strnicoll_l((const char *)s1, (const char *)s2, n, plocinfo);
 
-        if ( 0 == (ret = __crtCompareStringA(plocinfo,
+        if ( 0 == (ret = __acrt_CompareStringA(plocinfo,
                                              plocinfo->mbcinfo->mblcid,
                                               SORT_STRINGSORT | NORM_IGNORECASE,
                                               (const char *)s1,
@@ -76,13 +78,16 @@ extern "C" int __cdecl _mbsnbicoll_l(
         return ret - 2;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsnbicoll_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl _mbsnbicoll(
-//        const unsigned char *s1,
-//        const unsigned char *s2,
-//        size_t n
-//        )
-//{
-//    return _mbsnbicoll_l(s1, s2, n, nullptr);
-//}
+/*extern "C" int __cdecl _mbsnbicoll(
+        const unsigned char *s1,
+        const unsigned char *s2,
+        size_t n
+        )
+{
+    return _mbsnbicoll_l(s1, s2, n, nullptr);
+}*/

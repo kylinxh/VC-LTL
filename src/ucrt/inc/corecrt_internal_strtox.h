@@ -199,14 +199,14 @@ UnsignedInteger __cdecl parse_integer(
 
     _VALIDATE_RETURN(base == 0 || (2 <= base && base <= 36), EINVAL, 0);
 
-    _LocaleUpdate locale_update{locale};
+    //_LocaleUpdate locale_update{locale};
 
     UnsignedInteger number{0}; // number is the accumulator
 
     auto const initial_state = source.save_state();
 
     char_type c{source.get()};
-    while (is_space(c, locale_update.GetLocaleT()))
+    while (is_space(c, locale/*locale_update.GetLocaleT()*/))
         c = source.get();
 
     unsigned flags{is_signed ? FL_SIGNED : 0};
@@ -1455,7 +1455,7 @@ floating_point_parse_result __cdecl parse_floating_point_from_source(
     }
 
     // If a radix point is present, scan the fractional part of the mantissa:
-    char const radix_point{*locale->locinfo->lconv->decimal_point};
+    char const radix_point{* (locale ? locale->locinfo->lconv : localeconv())->decimal_point};
     if (c == radix_point)
     {
         c = source.get();
@@ -1700,7 +1700,7 @@ SLD_STATUS __cdecl parse_floating_point(
     using char_type = typename CharacterSource::char_type;
 
     _VALIDATE_RETURN(result != nullptr, EINVAL, SLD_NODIGITS);
-    _VALIDATE_RETURN(locale != nullptr, EINVAL, SLD_NODIGITS);
+    //_VALIDATE_RETURN(locale != nullptr, EINVAL, SLD_NODIGITS);
 
     // PERFORMANCE NOTE:  fp_string is intentionally left uninitialized.  Zero-
     // initialization is quite expensive and is unnecessary.  The benefit of not

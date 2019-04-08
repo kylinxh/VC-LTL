@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 *wint_t _towupper_l(c, ptloci) - convert wide character to upper case
@@ -27,7 +28,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" wint_t __cdecl _towupper_l (
+extern "C" wint_t __cdecl _towupper_l_downlevel (
         wint_t c,
         _locale_t plocinfo
         )
@@ -55,7 +56,7 @@ extern "C" wint_t __cdecl _towupper_l (
     }
 
     /* convert wide char to uppercase */
-    if ( 0 == __crtLCMapStringW(
+    if ( 0 == __acrt_LCMapStringW(
                 plocinfo->locinfo->lc_handle[LC_CTYPE],
                 LCMAP_UPPERCASE,
                 (LPCWSTR)&c,
@@ -69,6 +70,9 @@ extern "C" wint_t __cdecl _towupper_l (
     return widechar;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_towupper_l_downlevel);
+
 #endif
 
 /***
@@ -88,10 +92,10 @@ extern "C" wint_t __cdecl _towupper_l (
 *
 *******************************************************************************/
 
-//extern "C" wint_t __cdecl towupper (
-//        wint_t c
-//        )
-//{
-//
-//    return _towupper_l(c, nullptr);
-//}
+/*extern "C" wint_t __cdecl towupper (
+        wint_t c
+        )
+{
+
+    return _towupper_l(c, nullptr);
+}*/

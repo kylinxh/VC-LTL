@@ -16,6 +16,8 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
+
 
 /***
 * _mbsnicoll - Collate n characters of strings, ignoring case (MBCS)
@@ -41,7 +43,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _mbsnicoll_l(
+extern "C" int __cdecl _mbsnicoll_l_downlevel(
         const unsigned char *s1,
         const unsigned char *s2,
         size_t n,
@@ -69,7 +71,7 @@ extern "C" int __cdecl _mbsnicoll_l(
         bcnt1 = _mbsnbcnt_l(s1, n, plocinfo);
         bcnt2 = _mbsnbcnt_l(s2, n, plocinfo);
 
-        if ( 0 == (ret = __crtCompareStringA(
+        if ( 0 == (ret = __acrt_CompareStringA(
                         plocinfo,
                         plocinfo->mbcinfo->mblcid,
                         SORT_STRINGSORT | NORM_IGNORECASE,
@@ -86,13 +88,16 @@ extern "C" int __cdecl _mbsnicoll_l(
         return ret - 2;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsnicoll_l_downlevel);
+
 #endif
 
-//extern "C" int (__cdecl _mbsnicoll)(
-//        const unsigned char *s1,
-//        const unsigned char *s2,
-//        size_t n
-//        )
-//{
-//    return _mbsnicoll_l(s1, s2, n, nullptr);
-//}
+/*extern "C" int (__cdecl _mbsnicoll)(
+        const unsigned char *s1,
+        const unsigned char *s2,
+        size_t n
+        )
+{
+    return _mbsnicoll_l(s1, s2, n, nullptr);
+}*/

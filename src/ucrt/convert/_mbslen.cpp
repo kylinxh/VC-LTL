@@ -17,6 +17,8 @@
 #include <corecrt_internal.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
+
 
 
 _Check_return_
@@ -29,20 +31,18 @@ static size_t __cdecl common_mbstrlen_l(
 {
     //_LocaleUpdate locale_update(locale);
 
-	auto _locale_mb_cur_max = ___mb_cur_max_l_func(locale);
-
     _ASSERTE(
-        _locale_mb_cur_max == 1 ||
-        _locale_mb_cur_max == 2);
+        locale_update.GetLocaleT()->locinfo->_public._locale_mb_cur_max == 1 ||
+        locale_update.GetLocaleT()->locinfo->_public._locale_mb_cur_max == 2);
 
     // Handle single byte character sets:
-    if (_locale_mb_cur_max == 1)
+    if (___mb_cur_max_l_func(locale) == 1)
     {
         return strnlen(string, max_size);
     }
 
     // Verify that all of the multibyte characters are valid:
-    if (MultiByteToWideChar(
+    if (__acrt_MultiByteToWideChar(
             locale? locale->locinfo->_locale_lc_codepage : ___lc_codepage_func(),
             MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
             string,
@@ -78,30 +78,34 @@ static size_t __cdecl common_mbstrlen_l(
 
 
 #ifdef _ATL_XP_TARGETING
-extern "C" size_t __cdecl _mbstrlen_l(
+extern "C" size_t __cdecl _mbstrlen_l_downlevel(
     char const* const string,
     _locale_t   const locale
     )
 {
     return common_mbstrlen_l(string, SIZE_MAX, locale);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstrlen_l_downlevel);
+
 #endif
 
-//extern "C" size_t __cdecl _mbstrlen(char const* const string)
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        return strlen(string);
-//    }
-//    else
-//    {
-//        return _mbstrlen_l(string, nullptr);
-//    }
-//}
+/*extern "C" size_t __cdecl _mbstrlen(char const* const string)
+{
+    if (!__acrt_locale_changed())
+    {
+        return strlen(string);
+    }
+    else
+    {
+        return _mbstrlen_l(string, nullptr);
+    }
+}*/
+
 
 
 #ifdef _ATL_XP_TARGETING
-extern "C" size_t __cdecl _mbstrnlen_l(
+extern "C" size_t __cdecl _mbstrnlen_l_downlevel(
     char const* const string,
     size_t      const max_size,
     _locale_t   const locale
@@ -112,14 +116,20 @@ extern "C" size_t __cdecl _mbstrnlen_l(
 
     return common_mbstrlen_l(string, max_size, locale);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstrnlen_l_downlevel);
+
 #endif
 
 #ifdef _ATL_XP_TARGETING
-extern "C" size_t __cdecl _mbstrnlen(
+extern "C" size_t __cdecl _mbstrnlen_downlevel(
     char const* const string,
     size_t      const max_size
     )
 {
     return _mbstrnlen_l(string, max_size, nullptr);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstrnlen_downlevel);
+
 #endif

@@ -11,16 +11,21 @@
 // These functions return -1 if the pointer points to a trail byte; 0 if it does
 // not.
 //
+// These functions are intended for use with single/double byte character sets (DBCS)
+// and are meaningless for UTF-8 which has more than just a lead/trail byte pair.
+// for UTF-8 these functions always return FALSE.
+//
 #ifndef _MBCS
     #error This file should only be compiled with _MBCS defined
 #endif
 
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _ismbstrail_l(
+extern "C" int __cdecl _ismbstrail_l_downlevel(
     unsigned char const*       string,
     unsigned char const*       current,
     _locale_t            const locale
@@ -51,12 +56,15 @@ extern "C" int __cdecl _ismbstrail_l(
 
     return 0;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_ismbstrail_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl _ismbstrail(
-//    unsigned char const* const string,
-//    unsigned char const* const current
-//    )
-//{
-//    return _ismbstrail_l(string, current, nullptr);
-//}
+/*extern "C" int __cdecl _ismbstrail(
+    unsigned char const* const string,
+    unsigned char const* const current
+    )
+{
+    return _ismbstrail_l(string, current, nullptr);
+}*/

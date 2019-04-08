@@ -9,6 +9,7 @@
 #include <corecrt_internal.h>
 #include <ctype.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 
 
@@ -28,7 +29,7 @@
 // The _chvalidator function is called by the character classification functions
 // in the debug CRT.  This function tests the character argument to ensure that
 // it is not out of range.  For performance reasons, this function is not used
-// in the retail CRT.  
+// in the retail CRT.
 #if defined _DEBUG
 
 extern "C" int __cdecl _chvalidator(int const c, int const mask)
@@ -40,12 +41,12 @@ extern "C" int __cdecl _chvalidator(int const c, int const mask)
 extern "C" int __cdecl _chvalidator_l(_locale_t const locale, int const c, int const mask)
 {
     _ASSERTE(c >= -1 && c <= 255);
-    
+
     _LocaleUpdate locale_update(locale);
 
-    int const index = (c >= -1 && c <= 255) ? c : -1;
+    int const index = (c >= -1 && c <= 255) ? static_cast<unsigned char>(c) : -1;
 
-    return locale_update.GetLocaleT()->locinfo->_public._locale_pctype[index] & mask; 
+    return locale_update.GetLocaleT()->locinfo->_public._locale_pctype[index] & mask;
 }
 
 #endif // _DEBUG
@@ -62,7 +63,7 @@ extern "C" int __cdecl _chvalidator_l(_locale_t const locale, int const c, int c
 //         0       0   leadbyte trailbyte
 //
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _isctype_l(int const c, int const mask, _locale_t const locale)
+extern "C" int __cdecl _isctype_l_downlevel(int const c, int const mask, _locale_t const locale)
 {
     //_LocaleUpdate locale_update(locale);
 	if (!locale)
@@ -71,7 +72,7 @@ extern "C" int __cdecl _isctype_l(int const c, int const mask, _locale_t const l
     // c valid between -1 and 255:
     if (c >= -1 && c <= 255)
     {
-        return locale->locinfo->_locale_pctype[c] & mask;
+        return locale->locinfo->_locale_pctype[static_cast<unsigned char>(c)] & mask;
     }
 
     size_t const buffer_count{3};
@@ -92,7 +93,7 @@ extern "C" int __cdecl _isctype_l(int const c, int const mask, _locale_t const l
         buffer_length = 1;
     }
 
-    
+
     unsigned short character_type[buffer_count]{};
     if (__acrt_GetStringTypeA(
             locale,
@@ -109,16 +110,19 @@ extern "C" int __cdecl _isctype_l(int const c, int const mask, _locale_t const l
 
     return static_cast<int>(character_type[0] & mask);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_isctype_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl _isctype(int const c, int const mask)
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        return __acrt_initial_locale_data._public._locale_pctype[c] & mask;
-//    }
-//    else
-//    {
-//        return _isctype_l(c, mask, nullptr);
-//    }
-//}
+/*extern "C" int __cdecl _isctype(int const c, int const mask)
+{
+    if (!__acrt_locale_changed())
+    {
+        return __acrt_initial_locale_data._public._locale_pctype[static_cast<unsigned char>(c)] & mask;
+    }
+    else
+    {
+        return _isctype_l(c, mask, nullptr);
+    }
+}*/

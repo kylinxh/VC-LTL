@@ -17,6 +17,7 @@
 
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 
 /***
@@ -40,7 +41,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _ismbslead_l(
+extern "C" int __cdecl _ismbslead_l_downlevel(
         const unsigned char *string,
         const unsigned char *current,
         _locale_t plocinfo
@@ -70,12 +71,15 @@ extern "C" int __cdecl _ismbslead_l(
 
         return 0;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_ismbslead_l_downlevel);
+
 #endif
 
-//extern "C" int (__cdecl _ismbslead)(
-//        const unsigned char *string,
-//        const unsigned char *current
-//        )
-//{
-//        return _ismbslead_l(string, current, nullptr);
-//}
+/*extern "C" int (__cdecl _ismbslead)(
+        const unsigned char *string,
+        const unsigned char *current
+        )
+{
+        return _ismbslead_l(string, current, nullptr);
+}*/

@@ -16,6 +16,7 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 * _mbsnbcoll(s1, s2, n) - Collate n bytes of two MBCS strings
@@ -39,7 +40,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _mbsnbcoll_l(
+extern "C" int __cdecl _mbsnbcoll_l_downlevel(
         const unsigned char *s1,
         const unsigned char *s2,
         size_t n,
@@ -64,7 +65,7 @@ extern "C" int __cdecl _mbsnbcoll_l(
         if (plocinfo->mbcinfo->ismbcodepage == 0)
             return _strncoll_l((const char *)s1, (const char *)s2, n, plocinfo);
 
-        if ( 0 == (ret = __crtCompareStringA(plocinfo,
+        if ( 0 == (ret = __acrt_CompareStringA(plocinfo,
                                               plocinfo->mbcinfo->mblcid,
                                               SORT_STRINGSORT,
                                               (const char *)s1,
@@ -80,13 +81,16 @@ extern "C" int __cdecl _mbsnbcoll_l(
         return ret - 2;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsnbcoll_l_downlevel);
+
 #endif
 
-//extern "C" int (__cdecl _mbsnbcoll)(
-//        const unsigned char *s1,
-//        const unsigned char *s2,
-//        size_t n
-//        )
-//{
-//    return _mbsnbcoll_l(s1, s2, n, nullptr);
-//}
+/*extern "C" int (__cdecl _mbsnbcoll)(
+        const unsigned char *s1,
+        const unsigned char *s2,
+        size_t n
+        )
+{
+    return _mbsnbcoll_l(s1, s2, n, nullptr);
+}*/

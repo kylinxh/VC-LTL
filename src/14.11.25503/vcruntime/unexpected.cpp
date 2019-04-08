@@ -8,8 +8,8 @@
 #include <eh.h>
 #include <vcruntime_internal.h>
 #include <corecrt_internal.h>
-#include "..\..\winapi_thunks.h"
-
+#include <winapi_thunks.h>
+#include <msvcrt_IAT.h>
 
 static __forceinline unexpected_handler __cdecl get_unexpected_or_default(
 	__acrt_ptd const* const ptd

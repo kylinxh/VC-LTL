@@ -6,6 +6,7 @@
 // The invalid parameter handlers and related functionality
 //
 #include <corecrt_internal.h>
+#include <msvcrt_IAT.h>
 
 
 
@@ -65,21 +66,21 @@ static thread_local _invalid_parameter_handler _thread_local_iph=nullptr;
 
 #endif
 
-//extern "C" void __cdecl __acrt_initialize_invalid_parameter_handler(void* const encoded_null)
-//{
-//#if defined _CRT_GLOBAL_STATE_ISOLATION
-//    const _invalid_parameter_handler encoded_os_iph = __crt_fast_encode_pointer(invalid_parameter_handler_continue);
-//#endif
-//    const _invalid_parameter_handler iph[] =
-//    {
-//        reinterpret_cast<_invalid_parameter_handler>(encoded_null)
-//#if defined _CRT_GLOBAL_STATE_ISOLATION
-//        ,encoded_os_iph
-//#endif
-//    };
-//
-//    __acrt_invalid_parameter_handler.initialize_from_array(iph);
-//}
+/*extern "C" void __cdecl __acrt_initialize_invalid_parameter_handler(void* const encoded_null)
+{
+#if defined _CRT_GLOBAL_STATE_ISOLATION
+    const _invalid_parameter_handler encoded_os_iph = __crt_fast_encode_pointer(invalid_parameter_handler_continue);
+#endif
+    const _invalid_parameter_handler iph[] =
+    {
+        reinterpret_cast<_invalid_parameter_handler>(encoded_null)
+#if defined _CRT_GLOBAL_STATE_ISOLATION
+        ,encoded_os_iph
+#endif
+    };
+
+    __acrt_invalid_parameter_handler.initialize_from_array(iph);
+}*/
 
 
 
@@ -88,7 +89,7 @@ static thread_local _invalid_parameter_handler _thread_local_iph=nullptr;
 // _invalid_parameter
 //
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-extern "C" void __cdecl _invalid_parameter(
+extern "C" void __cdecl _invalid_parameter_advanced(
     wchar_t const* const expression,
     wchar_t const* const function_name,
     wchar_t const* const file_name,
@@ -112,20 +113,34 @@ extern "C" void __cdecl _invalid_parameter(
     _invoke_watson(expression, function_name, file_name, line_number, reserved);
 }
 
-extern "C" void __cdecl _invalid_parameter_noinfo()
+_LCRT_DEFINE_IAT_SYMBOL(_invalid_parameter_advanced);
+
+EXTERN_C _ACRTIMP void __cdecl _invalid_parameter(
+        _In_opt_z_ wchar_t const*,
+        _In_opt_z_ wchar_t const*,
+        _In_opt_z_ wchar_t const*,
+        _In_       unsigned int,
+        _In_       uintptr_t
+        );
+
+extern "C" void __cdecl _invalid_parameter_noinfo_downlevel()
 {
     _invalid_parameter(nullptr, nullptr, nullptr, 0, 0);
 }
 
+_LCRT_DEFINE_IAT_SYMBOL(_invalid_parameter_noinfo_downlevel);
+
+
 // This is used by inline code in the C++ Standard Library and the SafeInt
 // library.  Because it is __declspec(noreturn), the compiler can better
 // optimize use of the invalid parameter handler for inline code.
-extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn()
+extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn_downlevel()
 {
     _invalid_parameter(nullptr, nullptr, nullptr, 0, 0);
     _invoke_watson    (nullptr, nullptr, nullptr, 0, 0);
 }
 
+_LCRT_DEFINE_IAT_SYMBOL(_invalid_parameter_noinfo_noreturn_downlevel);
 
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -205,7 +220,7 @@ extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(
         }
     }
 
-    extern "C" __declspec(noreturn) void __cdecl _invoke_watson(
+    extern "C" __declspec(noreturn) void __cdecl _invoke_watson_downlevel(
         wchar_t const* const expression,
         wchar_t const* const function_name,
         wchar_t const* const file_name,
@@ -235,7 +250,7 @@ extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(
 
 #else // ^^^ (_M_IX86 || _M_X64) && !_UCRT_ENCLAVE_BUILD ^^^ // vvv Newer Architectures vvv //
 
-    extern "C" __declspec(noreturn) void __cdecl _invoke_watson(
+    extern "C" __declspec(noreturn) void __cdecl _invoke_watson_downlevel(
         wchar_t const* const expression,
         wchar_t const* const function_name,
         wchar_t const* const file_name,
@@ -254,6 +269,7 @@ extern "C" __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(
 
 #endif
 
+	_LCRT_DEFINE_IAT_SYMBOL(_invoke_watson_downlevel);
 
 
 //-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -266,11 +282,14 @@ extern "C" _invalid_parameter_handler __cdecl _set_invalid_parameter_handler_dow
 	return __crt_interlocked_exchange_pointer(&__acrt_invalid_parameter_handler, new_handler);
 }
 
+_LCRT_DEFINE_IAT_SYMBOL(_set_invalid_parameter_handler_downlevel);
+
 extern "C" _invalid_parameter_handler __cdecl _get_invalid_parameter_handler_downlevel()
 {
     return __acrt_invalid_parameter_handler;
 }
 
+_LCRT_DEFINE_IAT_SYMBOL(_get_invalid_parameter_handler_downlevel);
 
 
 extern "C" _invalid_parameter_handler __cdecl _set_thread_local_invalid_parameter_handler_downlevel(_invalid_parameter_handler const new_handler)
@@ -280,7 +299,12 @@ extern "C" _invalid_parameter_handler __cdecl _set_thread_local_invalid_paramete
     return old_handler;
 }
 
+_LCRT_DEFINE_IAT_SYMBOL(_set_thread_local_invalid_parameter_handler_downlevel);
+
+
 extern "C" _invalid_parameter_handler __cdecl _get_thread_local_invalid_parameter_handler_downlevel()
 {
     return _thread_local_iph;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_get_thread_local_invalid_parameter_handler_downlevel);

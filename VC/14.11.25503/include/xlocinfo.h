@@ -55,24 +55,29 @@ _EXTERN_C
 
 typedef struct _Collvec
 	{	/* stuff needed by _Strcoll, etc. */
+	unsigned long _Hand;	// LCID
 	unsigned int _Page;		// UINT
-	wchar_t *_LocaleName;
+	//wchar_t *_LocaleName;
 	} _Collvec;
 
 typedef struct _Ctypevec
 	{	/* stuff needed by _Tolower, etc. */
+	unsigned long _Hand;	// LCID
 	unsigned int _Page;		// UINT
 	const short *_Table;
 	int _Delfl;
-	wchar_t *_LocaleName;
+	//wchar_t *_LocaleName;
 	} _Ctypevec;
 
 typedef struct _Cvtvec
 	{	/* stuff needed by _Mbrtowc, etc. */
+	unsigned long _Hand;	// LCID
 	unsigned int _Page;		// UINT
+#if 0
 	unsigned int _Mbcurmax;
 	int _Isclocale;	// LCID == _CLOCALEHANDLE
 	unsigned char _Isleadbyte[32];	// 256 bits
+#endif
 	} _Cvtvec;
 
 		/* FUNCTION DECLARATIONS */
@@ -146,16 +151,16 @@ _ACRTIMP size_t __cdecl _Strftime(_Out_writes_z_(_Maxsize) char *,
 
 _Success_(return != 0)
 _Ret_z_
-extern wchar_t *__cdecl _W_Getdays(void);
+_ACRTIMP wchar_t *__cdecl _W_Getdays(void);
 
 _Success_(return != 0)
 _Ret_z_
-extern wchar_t *__cdecl _W_Getmonths(void);
+_ACRTIMP wchar_t *__cdecl _W_Getmonths(void);
 
 _ACRTIMP void *__cdecl _W_Gettnames(void);
 
 _Success_(return > 0)
-extern size_t __cdecl _Wcsftime(_Out_writes_z_(_Maxsize) wchar_t *,
+_ACRTIMP size_t __cdecl _Wcsftime(_Out_writes_z_(_Maxsize) wchar_t *,
 	_In_ size_t _Maxsize, _In_z_ const wchar_t *, _In_ const struct tm *,
 	_In_opt_ void *);
 _END_EXTERN_C

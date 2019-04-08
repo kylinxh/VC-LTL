@@ -13,13 +13,14 @@
 #include <corecrt_internal_securecrt.h>
 #include <locale.h>
 #include <string.h>
+#include <msvcrt_IAT.h>
 
 /***
 *int _wcsnicmp(first, last, count) - compares count wchar_t of strings,
 *       ignore case
 *
 *Purpose:
-*       Compare the two strings for lexical order.  Stops the comparison
+*       Compare the two strings for ordinal order.  Stops the comparison
 *       when the following occurs: (1) strings differ, (2) the end of the
 *       strings is reached, or (3) count characters have been compared.
 *       For the purposes of the comparison, upper case characters are
@@ -42,7 +43,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _wcsnicmp_l (
+extern "C" int __cdecl _wcsnicmp_l_downlevel (
         const wchar_t * first,
         const wchar_t * last,
         size_t count,
@@ -90,42 +91,47 @@ extern "C" int __cdecl _wcsnicmp_l (
     }
     return result;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_wcsnicmp_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl _wcsnicmp (
-//        const wchar_t * first,
-//        const wchar_t * last,
-//        size_t count
-//        )
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//
-//        wchar_t f,l;
-//        int result = 0;
-//
-//        if(count)
-//        {
-//            /* validation section */
-//            _VALIDATE_RETURN(first != nullptr, EINVAL, _NLSCMPERROR);
-//            _VALIDATE_RETURN(last != nullptr, EINVAL, _NLSCMPERROR);
-//
-//            do {
-//                f = __ascii_towlower(*first);
-//                l = __ascii_towlower(*last);
-//                first++;
-//                last++;
-//            } while ( (--count) && f && (f == l) );
-//
-//            result = (int)(f-l);
-//        }
-//
-//        return result;
-//
-//    }
-//    else
-//    {
-//        return _wcsnicmp_l(first, last, count, nullptr);
-//    }
-//}
+#if 0
+extern "C" int __cdecl _wcsnicmp (
+        const wchar_t * first,
+        const wchar_t * last,
+        size_t count
+        )
+{
+    if (!__acrt_locale_changed())
+    {
+
+        wchar_t f,l;
+        int result = 0;
+
+        if(count)
+        {
+            /* validation section */
+            _VALIDATE_RETURN(first != nullptr, EINVAL, _NLSCMPERROR);
+            _VALIDATE_RETURN(last != nullptr, EINVAL, _NLSCMPERROR);
+
+            do {
+                f = __ascii_towlower(*first);
+                l = __ascii_towlower(*last);
+                first++;
+                last++;
+            } while ( (--count) && f && (f == l) );
+
+            result = (int)(f-l);
+        }
+
+        return result;
+
+    }
+    else
+    {
+        return _wcsnicmp_l(first, last, count, nullptr);
+    }
+}
+#endif
 

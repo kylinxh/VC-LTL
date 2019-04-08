@@ -7,13 +7,16 @@
 *       Convert a multibyte char string into the equivalent wide char string.
 *
 *******************************************************************************/
-#include <corecrt_internal.h>
+#include <corecrt_internal_mbstring.h>
 #include <corecrt_internal_securecrt.h>
 #include <ctype.h>
 #include <locale.h>
 #include <errno.h>
 #include <stdlib.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
+
+using namespace __crt_mbstring;
 
 /***
 *size_t mbstowcs() - Convert multibyte char string to wide char string.
@@ -79,6 +82,13 @@ static size_t __cdecl _mbstowcs_l_helper(
 		_locale_lc_codepage = ___lc_codepage_func();
 	}
 
+    if (/*_loc_update.GetLocaleT()->locinfo->_public.*/_locale_lc_codepage == CP_UTF8)
+    {
+        mbstate_t state{};
+        return __mbsrtowcs_utf8(pwcs, &s, n, &state);
+    }
+
+    /* if destination string exists, fill it in */
     if (pwcs)
     {
         if (/*_loc_update.GetLocaleT()->locinfo->locale_name[LC_CTYPE] == nullptr*/_lc_ctype==0)
@@ -100,7 +110,7 @@ static size_t __cdecl _mbstowcs_l_helper(
             unsigned char *p;
 
             /* Assume that the buffer is large enough */
-            if ((count = MultiByteToWideChar(_locale_lc_codepage,
+            if ((count = __acrt_MultiByteToWideChar(_locale_lc_codepage,
                 MB_PRECOMPOSED |
                 MB_ERR_INVALID_CHARS,
                 s,
@@ -145,7 +155,7 @@ static size_t __cdecl _mbstowcs_l_helper(
             }
             bytecnt = ((int) ((char *) p - (char *) s));
 
-            if ((count = MultiByteToWideChar(_locale_lc_codepage,
+            if ((count = __acrt_MultiByteToWideChar(_locale_lc_codepage,
                 MB_PRECOMPOSED,
                 s,
                 bytecnt,
@@ -165,7 +175,7 @@ static size_t __cdecl _mbstowcs_l_helper(
         if (_lc_ctype == 0) {
             return strlen(s);
         }
-        else if ((count = MultiByteToWideChar(_locale_lc_codepage,
+        else if ((count = __acrt_MultiByteToWideChar(_locale_lc_codepage,
             MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
             s,
             -1,
@@ -182,7 +192,7 @@ static size_t __cdecl _mbstowcs_l_helper(
 }
 
 #ifdef _ATL_XP_TARGETING
-extern "C" size_t __cdecl _mbstowcs_l(
+extern "C" size_t __cdecl _mbstowcs_l_downlevel(
     wchar_t  *pwcs,
     const char *s,
     size_t n,
@@ -193,25 +203,28 @@ extern "C" size_t __cdecl _mbstowcs_l(
 
     return _mbstowcs_l_helper(pwcs, s, n, plocinfo);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstowcs_l_downlevel);
+
 #endif
 
-//extern "C" size_t __cdecl mbstowcs(
-//    wchar_t  *pwcs,
-//    const char *s,
-//    size_t n
-//    )
-//{
-//    _BEGIN_SECURE_CRT_DEPRECATION_DISABLE
-//        if (!__acrt_locale_changed())
-//        {
-//            return _mbstowcs_l(pwcs, s, n, &__acrt_initial_locale_pointers);
-//        }
-//        else
-//        {
-//            return _mbstowcs_l(pwcs, s, n, nullptr);
-//        }
-//        _END_SECURE_CRT_DEPRECATION_DISABLE
-//}
+/*extern "C" size_t __cdecl mbstowcs(
+    wchar_t  *pwcs,
+    const char *s,
+    size_t n
+    )
+{
+    _BEGIN_SECURE_CRT_DEPRECATION_DISABLE
+        if (!__acrt_locale_changed())
+        {
+            return _mbstowcs_l(pwcs, s, n, &__acrt_initial_locale_pointers);
+        }
+        else
+        {
+            return _mbstowcs_l(pwcs, s, n, nullptr);
+        }
+        _END_SECURE_CRT_DEPRECATION_DISABLE
+}*/
 
 /***
 *errno_t mbstowcs_s() - Convert multibyte char string to wide char string.
@@ -239,7 +252,7 @@ extern "C" size_t __cdecl _mbstowcs_l(
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" errno_t __cdecl _mbstowcs_s_l(
+extern "C" errno_t __cdecl _mbstowcs_s_l_downlevel(
     size_t *pConvertedChars,
     wchar_t  *pwcs,
     size_t sizeInWords,
@@ -311,10 +324,13 @@ extern "C" errno_t __cdecl _mbstowcs_s_l(
 
     return retvalue;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstowcs_s_l_downlevel);
+
 #endif
 
 #ifdef _ATL_XP_TARGETING
-extern "C" errno_t __cdecl mbstowcs_s(
+extern "C" errno_t __cdecl mbstowcs_s_downlevel(
     size_t *pConvertedChars,
     wchar_t  *pwcs,
     size_t sizeInWords,
@@ -322,6 +338,55 @@ extern "C" errno_t __cdecl mbstowcs_s(
     size_t n
     )
 {
-    return _mbstowcs_s_l(pConvertedChars, pwcs, sizeInWords, s, n, nullptr);
+    //return _mbstowcs_s_l(pConvertedChars, pwcs, sizeInWords, s, n, nullptr);
+	if (pConvertedChars)
+		*pConvertedChars = 0;
+
+	
+	auto retsize = mbstowcs(pwcs, s, sizeInWords > n ? n : sizeInWords);
+
+	if (retsize == (size_t)-1)
+	{
+		if (pwcs != nullptr)
+		{
+			_RESET_STRING(pwcs, sizeInWords);
+		}
+		return errno;
+	}
+
+	/* count the null terminator */
+	retsize++;
+
+	errno_t retvalue = 0;
+
+	if (pwcs != nullptr)
+	{
+		/* return error if the string does not fit, unless n == _TRUNCATE */
+		if (retsize > sizeInWords)
+		{
+			if (n != _TRUNCATE)
+			{
+				_RESET_STRING(pwcs, sizeInWords);
+				errno = ERANGE;
+				_invalid_parameter_noinfo();
+				return ERANGE;
+			}
+			retsize = sizeInWords;
+			retvalue = STRUNCATE;
+		}
+
+		/* ensure the string is null terminated */
+		pwcs[retsize - 1] = '\0';
+	}
+
+	if (pConvertedChars != nullptr)
+	{
+		*pConvertedChars = retsize;
+	}
+
+	return retvalue;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(mbstowcs_s_downlevel);
+
 #endif

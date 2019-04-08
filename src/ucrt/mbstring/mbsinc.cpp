@@ -14,6 +14,7 @@
 #include <corecrt_internal.h>
 #include <corecrt_internal_mbstring.h>
 #include <stddef.h>
+#include <msvcrt_IAT.h>
 
 #pragma warning(disable:__WARNING_POTENTIAL_BUFFER_OVERFLOW_NULLTERMINATED) // 26018
 
@@ -36,7 +37,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned char * __cdecl _mbsinc_l(
+extern "C" unsigned char * __cdecl _mbsinc_l_downlevel(
         const unsigned char *current,
         _locale_t plocinfo
         )
@@ -54,25 +55,31 @@ extern "C" unsigned char * __cdecl _mbsinc_l(
 
         return (unsigned char *)current;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsinc_l_downlevel);
+
 #endif
 
-//extern "C" unsigned char * (__cdecl _mbsinc)(
-//        const unsigned char *current
-//        )
-//{
-//        /* validation section */
-//        _VALIDATE_RETURN(current != nullptr, EINVAL, nullptr);
-//
-//        if ( _ismbblead(*(current++)))
-//        {
-//            /* don't move forward two if we get leadbyte, EOS
-//               also don't assert here as we are too low level
-//            */
-//            if(*current!='\0')
-//            {
-//                current++;
-//            }
-//        }
-//
-//        return (unsigned char *)current;
-//}
+#if _CRT_NTDDI_MIN <= NTDDI_WS03
+//WinXP还有2003这个函数有Bug，会导致越界访问，因此我们提供一份新的
+extern "C" unsigned char * (__cdecl _mbsinc)(
+        const unsigned char *current
+        )
+{
+        /* validation section */
+        _VALIDATE_RETURN(current != nullptr, EINVAL, nullptr);
+
+        if ( _ismbblead(*(current++)))
+        {
+            /* don't move forward two if we get leadbyte, EOS
+               also don't assert here as we are too low level
+            */
+            if(*current!='\0')
+            {
+                current++;
+            }
+        }
+
+        return (unsigned char *)current;
+}
+#endif

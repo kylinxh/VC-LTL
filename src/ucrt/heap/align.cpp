@@ -17,6 +17,7 @@
 
 #include <corecrt_internal.h>
 #include <malloc.h>
+#include <msvcrt_IAT.h>
 
 
 
@@ -36,6 +37,62 @@
 * 6 -> Wasted memory.
 *
 *******************************************************************************/
+
+static void _aligned_free_base(
+    _Pre_maybenull_ _Post_invalid_ void* block
+    );
+
+_Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size)
+static void* _aligned_malloc_base(
+    _In_ size_t size,
+    _In_ size_t alignment
+    );
+
+_Check_return_
+static size_t _aligned_msize_base(
+    _Pre_notnull_ void*  block,
+    _In_          size_t alignment,
+    _In_          size_t offset
+    );
+
+_Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size)
+static void* _aligned_offset_malloc_base(
+    _In_ size_t size,
+    _In_ size_t alignment,
+    _In_ size_t offset
+    );
+
+_Success_(return != 0) _Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size)
+static void* _aligned_offset_realloc_base(
+    _Pre_maybenull_ _Post_invalid_ void*  block,
+    _In_                           size_t size,
+    _In_                           size_t alignment,
+    _In_                           size_t offset
+    );
+
+_Success_(return != 0) _Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size * count)
+static void* _aligned_offset_recalloc_base(
+    _Pre_maybenull_ _Post_invalid_ void*  block,
+    _In_                           size_t count,
+    _In_                           size_t size,
+    _In_                           size_t alignment,
+    _In_                           size_t offset
+    );
+
+_Success_(return != 0) _Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size)
+static void* _aligned_realloc_base(
+    _Pre_maybenull_ _Post_invalid_ void*  block,
+    _In_                           size_t size,
+    _In_                           size_t alignment
+    );
+
+_Success_(return != 0) _Check_return_ _Ret_maybenull_ _Post_writable_byte_size_(size * count)
+static void* _aligned_recalloc_base(
+    _Pre_maybenull_ _Post_invalid_ void*  block,
+    _In_                           size_t count,
+    _In_                           size_t size,
+    _In_                           size_t alignment
+    );
 
 /***
 * void *_aligned_malloc_base(size_t size, size_t alignment)
@@ -58,13 +115,13 @@
 *
 *******************************************************************************/
 
-extern "C" void* __cdecl _aligned_malloc_base(
+/*static __forceinline void* __cdecl _aligned_malloc_base(
     size_t const size,
     size_t const alignment
     )
 {
     return _aligned_offset_malloc_base(size, alignment, 0);
-}
+}*/
 /***
 * void *_aligned_offset_malloc_base(size_t size, size_t alignment, int offset)
 *       - Get a block of memory from the heap.
@@ -88,7 +145,7 @@ extern "C" void* __cdecl _aligned_malloc_base(
 *******************************************************************************/
 
 
-extern "C" void* __cdecl _aligned_offset_malloc_base(
+static __forceinline void* __cdecl _aligned_offset_malloc_base(
     size_t size,
     size_t align,
     size_t offset
@@ -147,7 +204,7 @@ extern "C" void* __cdecl _aligned_offset_malloc_base(
 *
 *******************************************************************************/
 
-extern "C" void* __cdecl _aligned_realloc_base(
+static __forceinline void* __cdecl _aligned_realloc_base(
     void*  const block,
     size_t const size,
     size_t const alignment
@@ -185,7 +242,7 @@ extern "C" void* __cdecl _aligned_realloc_base(
 *
 *******************************************************************************/
 
-extern "C" void* __cdecl _aligned_recalloc_base(
+static __forceinline void* __cdecl _aligned_recalloc_base(
     void*  const block,
     size_t const count,
     size_t const size,
@@ -224,7 +281,7 @@ extern "C" void* __cdecl _aligned_recalloc_base(
 *
 *******************************************************************************/
 
-extern "C" void* __cdecl _aligned_offset_realloc_base(
+static __forceinline void* __cdecl _aligned_offset_realloc_base(
     void*  block,
     size_t size,
     size_t align,
@@ -337,7 +394,7 @@ extern "C" void* __cdecl _aligned_offset_realloc_base(
 *
 *******************************************************************************/
 
-extern "C" size_t __cdecl _aligned_msize_base(
+static __forceinline size_t __cdecl _aligned_msize_base(
     void*  block,
     size_t align,
     size_t offset
@@ -402,7 +459,7 @@ extern "C" size_t __cdecl _aligned_msize_base(
 *
 *******************************************************************************/
 
-extern "C" void* __cdecl _aligned_offset_recalloc_base(
+static __forceinline void* __cdecl _aligned_offset_recalloc_base(
     void*  block,
     size_t count,
     size_t size,
@@ -457,7 +514,7 @@ extern "C" void* __cdecl _aligned_offset_recalloc_base(
 *
 *******************************************************************************/
 
-extern "C" void __cdecl _aligned_free_base(void* const block)
+static __forceinline void __cdecl _aligned_free_base(void* const block)
 {
     uintptr_t ptr;
 
@@ -474,9 +531,12 @@ extern "C" void __cdecl _aligned_free_base(void* const block)
     free((void *)ptr);
 }
 
+// These functions are patchable and therefore must be marked noinline.
+// Their *_base implementations are marked __forceinline in order to
+// ensure each export is separated from each other and that there is
+// enough space in each export to host a patch.
 
-
-extern "C" void __cdecl _aligned_free(void* const block)
+/*extern "C" __declspec(noinline) void __cdecl _aligned_free(void* const block)
 {
     #ifdef _DEBUG
     _aligned_free_dbg(block);
@@ -485,7 +545,7 @@ extern "C" void __cdecl _aligned_free(void* const block)
     #endif
 }
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_malloc(
+extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_malloc(
     size_t const size,
     size_t const alignment
     )
@@ -495,9 +555,9 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_malloc(
     #else
     return _aligned_malloc_base(size, alignment);
     #endif
-}
+}*/
 
-extern "C" size_t __cdecl _aligned_msize(
+extern "C" __declspec(noinline) size_t __cdecl _aligned_msize_downlevel(
     void*  const block,
     size_t const alignment,
     size_t const offset)
@@ -509,7 +569,9 @@ extern "C" size_t __cdecl _aligned_msize(
     #endif
 }
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_malloc(
+_LCRT_DEFINE_IAT_SYMBOL(_aligned_msize_downlevel);
+
+/*extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_offset_malloc(
     size_t const size,
     size_t const alignment,
     size_t const offset
@@ -522,7 +584,7 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_malloc(
     #endif
 }
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_realloc(
+extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_offset_realloc(
     void*  const block,
     size_t const size,
     size_t const alignment,
@@ -534,9 +596,9 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_realloc(
     #else
     return _aligned_offset_realloc_base(block, size, alignment, offset);
     #endif
-}
+}*/
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_recalloc(
+extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_offset_recalloc_downlevel(
     void*  const block,
     size_t const count,
     size_t const size,
@@ -551,7 +613,9 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_offset_recalloc(
     #endif
 }
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_realloc(
+_LCRT_DEFINE_IAT_SYMBOL(_aligned_offset_recalloc_downlevel);
+
+/*extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_realloc(
     void*  const block,
     size_t const size,
     size_t const alignment
@@ -562,9 +626,9 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_realloc(
     #else
     return _aligned_realloc_base(block, size, alignment);
     #endif
-}
+}*/
 
-extern "C" _CRTRESTRICT void* __cdecl _aligned_recalloc(
+extern "C" __declspec(noinline) _CRTRESTRICT void* __cdecl _aligned_recalloc_downlevel(
     void*  const block,
     size_t const count,
     size_t const size,
@@ -577,3 +641,5 @@ extern "C" _CRTRESTRICT void* __cdecl _aligned_recalloc(
     return _aligned_recalloc_base(block, count, size, alignment);
     #endif
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_aligned_recalloc_downlevel);

@@ -15,6 +15,7 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include <string.h>
+#include <msvcrt_IAT.h>
 
 
 /***
@@ -38,7 +39,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned char * __cdecl _mbsnbcat_l(
+extern "C" unsigned char * __cdecl _mbsnbcat_l_downlevel(
         unsigned char *dst,
         const unsigned char *src,
         size_t cnt,
@@ -107,15 +108,18 @@ extern "C" unsigned char * __cdecl _mbsnbcat_l(
 
         return(start);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsnbcat_l_downlevel);
+
 #endif
 
-//extern "C" unsigned char * (__cdecl _mbsnbcat)(
-//        unsigned char *dst,
-//        const unsigned char *src,
-//        size_t cnt
-//        )
-//{
-//    _BEGIN_SECURE_CRT_DEPRECATION_DISABLE
-//    return _mbsnbcat_l(dst, src, cnt, nullptr);
-//    _END_SECURE_CRT_DEPRECATION_DISABLE
-//}
+/*extern "C" unsigned char * (__cdecl _mbsnbcat)(
+        unsigned char *dst,
+        const unsigned char *src,
+        size_t cnt
+        )
+{
+    _BEGIN_SECURE_CRT_DEPRECATION_DISABLE
+    return _mbsnbcat_l(dst, src, cnt, nullptr);
+    _END_SECURE_CRT_DEPRECATION_DISABLE
+}*/

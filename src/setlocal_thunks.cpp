@@ -5,13 +5,13 @@ setlocal.cpp 的修正实现，利用现有msvcrt 函数生成新的
 
 */
 
-
 #include <corecrt_internal.h>
 #include <locale.h>
 #include "winapi_thunks.h"
 
 #include <mbctype.h>
 #include <functional>
+#include "msvcrt_IAT.h"
 
 //static __crt_locale_pointers* ___StaticLocale;
 
@@ -148,40 +148,43 @@ static void __free_lconv_mon(lconv* plconv)
 		free(plconv->negative_sign);
 	}
 
-	//0x38
-	if (plconv->_W_int_curr_symbol /*!= __lconv_c_data._W_int_curr_symbol*/)
+	if (__LTL_GetOsMinVersion() >= MakeMiniVersion(6, 1))
 	{
-		free(plconv->_W_int_curr_symbol);
-	}
+		//0x38
+		if (plconv->lconv_Win7._W_int_curr_symbol /*!= __lconv_c_data._W_int_curr_symbol*/)
+		{
+			free(plconv->lconv_Win7._W_int_curr_symbol);
+		}
 
-	//0x3C
-	if (plconv->_W_currency_symbol /*!= __lconv_c_data._W_currency_symbol*/)
-	{
-		free(plconv->_W_currency_symbol);
-	}
+		//0x3C
+		if (plconv->lconv_Win7._W_currency_symbol /*!= __lconv_c_data._W_currency_symbol*/)
+		{
+			free(plconv->lconv_Win7._W_currency_symbol);
+		}
 
-	//0x40
-	if (plconv->_W_mon_decimal_point /*!= __lconv_c_data._W_mon_decimal_point*/)
-	{
-		free(plconv->_W_mon_decimal_point);
-	}
+		//0x40
+		if (plconv->lconv_Win7._W_mon_decimal_point /*!= __lconv_c_data._W_mon_decimal_point*/)
+		{
+			free(plconv->lconv_Win7._W_mon_decimal_point);
+		}
 
-	//0x44
-	if (plconv->_W_mon_thousands_sep /*!= __lconv_c_data._W_mon_thousands_sep*/)
-	{
-		free(plconv->_W_mon_thousands_sep);
-	}
+		//0x44
+		if (plconv->lconv_Win7._W_mon_thousands_sep /*!= __lconv_c_data._W_mon_thousands_sep*/)
+		{
+			free(plconv->lconv_Win7._W_mon_thousands_sep);
+		}
 
-	//0x48
-	if (plconv->_W_positive_sign /*!= __lconv_c_data._W_positive_sign*/)
-	{
-		free(plconv->_W_positive_sign);
-	}
+		//0x48
+		if (plconv->lconv_Win7._W_positive_sign /*!= __lconv_c_data._W_positive_sign*/)
+		{
+			free(plconv->lconv_Win7._W_positive_sign);
+		}
 
-	//0x4C
-	if (plconv->_W_negative_sign /*!= __lconv_c_data._W_negative_sign*/)
-	{
-		free(plconv->_W_negative_sign);
+		//0x4C
+		if (plconv->lconv_Win7._W_negative_sign /*!= __lconv_c_data._W_negative_sign*/)
+		{
+			free(plconv->lconv_Win7._W_negative_sign);
+		}
 	}
 }
 
@@ -208,16 +211,19 @@ static void __free_lconv_num(lconv* plconv)
 		free(plconv->grouping);
 	}
 
-	//0x30
-	if (plconv->_W_decimal_point /*!= __lconv_c_data._W_decimal_point*/)
+	if (__LTL_GetOsMinVersion() >= 0x00060001)
 	{
-		free(plconv->_W_decimal_point);
-	}
+		//0x30
+		if (plconv->lconv_Win7._W_decimal_point /*!= __lconv_c_data._W_decimal_point*/)
+		{
+			free(plconv->lconv_Win7._W_decimal_point);
+		}
 
-	//0x34
-	if (plconv->_W_thousands_sep /*!= __lconv_c_data._W_thousands_sep*/)
-	{
-		free(plconv->_W_thousands_sep);
+		//0x34
+		if (plconv->lconv_Win7._W_thousands_sep /*!= __lconv_c_data._W_thousands_sep*/)
+		{
+			free(plconv->lconv_Win7._W_thousands_sep);
+		}
 	}
 }
 
@@ -352,9 +358,10 @@ static void __cdecl __freetlocinfo(
 	_free_crt(ptloci);
 }
 
-#ifndef _ATL_XP_TARGETING
+#if _CRT_NTDDI_MIN >= NTDDI_VISTA && _CRT_NTDDI_MIN <= NTDDI_WIN7
+
 //WinXP不支持此接口
-EXTERN_C _locale_t __cdecl _get_current_locale(void)
+EXTERN_C _locale_t __cdecl _get_current_locale_downlevel(void)
 {
 	auto retval = (__crt_locale_pointers*)calloc(sizeof(__crt_locale_pointers), 1);
 	if (!retval)
@@ -393,6 +400,9 @@ EXTERN_C _locale_t __cdecl _get_current_locale(void)
 
 	return retval;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_get_current_locale_downlevel);
+
 #endif
 
 static __forceinline char * __cdecl common_setlocale(
@@ -475,31 +485,88 @@ static _locale_t __cdecl common_create_locale(
 	return plocale;
 }
 
-#ifndef _ATL_XP_TARGETING
+#if _CRT_NTDDI_MIN >= NTDDI_VISTA && _CRT_NTDDI_MIN <= NTDDI_WIN7
+
 //WinXP不支持此接口
-EXTERN_C _locale_t __cdecl _create_locale(
+EXTERN_C _locale_t __cdecl _create_locale_downlevel(
 	_In_   int         _Category,
 	_In_z_ char const* _Locale
 )
 {
 	return common_create_locale(_Category, _Locale);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_create_locale_downlevel);
+
 #endif
 
-#ifndef _ATL_XP_TARGETING
+#if _CRT_NTDDI_MIN >= NTDDI_VISTA
+
 //WinXP不支持此接口
-EXTERN_C _locale_t __cdecl _wcreate_locale(
+EXTERN_C _locale_t __cdecl _wcreate_locale_downlevel(
 	_In_   int            _category,
 	_In_z_ wchar_t const* _locale
 )
 {
+#if _CRT_NTDDI_MIN <= NTDDI_WIN7
 	return common_create_locale(_category, _locale);
+#else
+	//Windows 8的msvcrt.dll仅存在 _create_locale
+	_locale_t locale = nullptr;
+	char* _Locale_ANSI = nullptr;
+
+	if (_locale)
+	{
+		size_t _PtNumOfCharConverted = 0;
+
+		auto __errno = wcstombs_s(&_PtNumOfCharConverted, nullptr, 0, _locale, _CRT_INT_MAX);
+		if (__errno)
+		{
+			if(__errno == EINVAL || __errno == ERANGE)
+				_invoke_watson(nullptr, nullptr, nullptr, 0, 0);
+
+			return nullptr;
+		}
+
+		if (_PtNumOfCharConverted == 0)
+			return nullptr;
+
+		_Locale_ANSI = (char*)_malloca(_PtNumOfCharConverted);
+
+		if (!_Locale_ANSI)
+			return nullptr;
+
+
+		__errno = wcstombs_s(nullptr, _Locale_ANSI, _PtNumOfCharConverted, _locale, _CRT_SIZE_MAX);
+
+		if (__errno)
+		{
+			if (__errno == EINVAL || __errno == ERANGE)
+				_invoke_watson(nullptr, nullptr, nullptr, 0, 0);
+
+			goto __End;
+		}
+	}
+
+	locale = _create_locale(_category, _Locale_ANSI);
+
+__End:
+
+	if (_Locale_ANSI)
+		_freea(_Locale_ANSI);
+
+	return locale;
+#endif
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_wcreate_locale_downlevel);
+
 #endif
 
-#ifndef _ATL_XP_TARGETING
+#if _CRT_NTDDI_MIN >= NTDDI_VISTA
+
 //WinXP不支持此接口
-EXTERN_C int __cdecl _configthreadlocale(int i)
+EXTERN_C int __cdecl _configthreadlocale_downlevel(int i)
 {
 	/*
 	* ownlocale flag struct:
@@ -550,9 +617,14 @@ EXTERN_C int __cdecl _configthreadlocale(int i)
 	return retval;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_configthreadlocale_downlevel);
+
 #endif
 
-void __cdecl _free_locale(
+#if _CRT_NTDDI_MIN <= NTDDI_WIN7
+
+EXTERN_C void __cdecl _free_locale_downlevel(
 	_In_opt_ _locale_t plocinfo
 )
 {
@@ -604,10 +676,16 @@ void __cdecl _free_locale(
 	}
 }
 
-EXTERN_C int __cdecl ___mb_cur_max_l_func(_locale_t locale)
+_LCRT_DEFINE_IAT_SYMBOL(_free_locale_downlevel);
+
+#endif
+
+EXTERN_C int __cdecl ___mb_cur_max_l_func_downlevel(_locale_t locale)
 {
 	return locale == nullptr
 		? ___mb_cur_max_func()
 		: locale->locinfo->_locale_mb_cur_max;
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(___mb_cur_max_l_func_downlevel);

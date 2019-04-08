@@ -9,9 +9,6 @@
 
 #include <vcruntime.h>
 
-#define _UCRT_VERISON 10240
-#include "..\..\_msvcrt.h"
-
 _CRT_BEGIN_C_HEADER
 
 
@@ -24,7 +21,7 @@ _CRT_BEGIN_C_HEADER
 #ifndef _ACRTIMP
     #if defined _CRTIMP && !defined _VCRT_DEFINED_CRTIMP
         #define _ACRTIMP _CRTIMP
-    #elif /*!defined _CORECRT_BUILD &&*/ defined _DLL
+    #elif !defined _CORECRT_BUILD && defined _DLL
         #define _ACRTIMP __declspec(dllimport)
     #else
         #define _ACRTIMP
@@ -40,7 +37,7 @@ _CRT_BEGIN_C_HEADER
 #ifndef _DCRTIMP
     #if defined _CRTIMP && !defined _VCRT_DEFINED_CRTIMP
         #define _DCRTIMP _CRTIMP
-    #elif /*!defined _CORECRT_BUILD &&*/ defined _DLL
+    #elif !defined _CORECRT_BUILD && defined _DLL
         #define _DCRTIMP __declspec(dllimport)
     #else
         #define _DCRTIMP
@@ -143,13 +140,6 @@ extern "C++"
 #define _CRT_INT_MAX 2147483647
 #define _CRT_SIZE_MAX ((size_t)-1)
 
-#ifdef _ATL_XP_TARGETING
-//Windows XP的msvcrt有BUG，内部32位带符号整形。因此外部最大只允许0x3FFFFFFF
-#define _CRT_STDIO_SIZE_MAX 0x3FFFFFFF
-#else
-#define _CRT_STDIO_SIZE_MAX _CRT_SIZE_MAX
-#endif
-
 #define __FILEW__     _CRT_WIDE(__FILE__)
 #define __FUNCTIONW__ _CRT_WIDE(__FUNCTION__)
 
@@ -233,11 +223,11 @@ extern "C++"
         );
 #endif
 
-extern void __cdecl _invalid_parameter_noinfo(void);
-extern __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(void);
+_ACRTIMP_ALT void __cdecl _invalid_parameter_noinfo(void);
+_ACRTIMP __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(void);
 
 __declspec(noreturn)
-extern void __cdecl _invoke_watson(
+_ACRTIMP void __cdecl _invoke_watson(
     _In_opt_z_ wchar_t const*,
     _In_opt_z_ wchar_t const*,
     _In_opt_z_ wchar_t const*,

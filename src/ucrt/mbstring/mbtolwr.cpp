@@ -14,6 +14,8 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
+
 
 /***
 * _mbctolower - Convert character to lower case (MBCS)
@@ -37,7 +39,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" unsigned int __cdecl _mbctolower_l (
+extern "C" unsigned int __cdecl _mbctolower_l_downlevel (
         unsigned int c,
         _locale_t plocinfo
         )
@@ -58,7 +60,7 @@ extern "C" unsigned int __cdecl _mbctolower_l (
                 return c;
 
 
-            if (__crtLCMapStringA(
+            if (__acrt_LCMapStringA(
                         plocinfo,
                         plocinfo->mbcinfo->mblcid,
                         LCMAP_LOWERCASE,
@@ -80,11 +82,14 @@ extern "C" unsigned int __cdecl _mbctolower_l (
         else
             return (unsigned int)_mbbtolower_l((int)c, plocinfo);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbctolower_l_downlevel);
+
 #endif
 
-//extern "C" unsigned int (__cdecl _mbctolower) (
-//        unsigned int c
-//        )
-//{
-//    return _mbctolower_l(c, nullptr);
-//}
+/*extern "C" unsigned int (__cdecl _mbctolower) (
+        unsigned int c
+        )
+{
+    return _mbctolower_l(c, nullptr);
+}*/

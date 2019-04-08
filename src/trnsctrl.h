@@ -30,12 +30,15 @@
 #error ERROR: Use of C runtime library internal header file.
 #endif  /* _CRTBLD */
 
-extern "C" void** __cdecl __current_exception();
-extern "C" int* __cdecl __processing_throw();
+extern "C" _VCRTIMP void** __cdecl __current_exception();
+extern "C" _VCRTIMP int* __cdecl __processing_throw();
+extern "C" _VCRTIMP void** __cdecl __current_exception_context();
 
 #define _pCurrentException (*(EHExceptionRecord**)__current_exception())
 
 #define __ProcessingThrow (*__processing_throw())
+
+#define _pCurrentExContext (*(CONTEXT**)__current_exception_context())
 
 #if _M_MRX000 >= 4000
 
@@ -163,6 +166,13 @@ extern TryBlockMapEntry *_GetRangeOfTrysToCheck(FuncInfo *, int, __ehstate_t, un
 extern VOID _DestructExceptionObject(EHExceptionRecord *, BOOLEAN);
 #elif defined (_M_IX86)
 
+
+typedef struct FrameInfo {
+	void                    *pExceptionObject;
+	struct FrameInfo        *pNext;
+
+} FRAMEINFO;
+
 //
 // For calling funclets (including the catch)
 //
@@ -172,11 +182,35 @@ extern void   __stdcall _JumpToContinuation(void *, EHRegistrationNode *);
 //
 // For calling member functions:
 //
-extern "C" void __stdcall _CallMemberFunction0(void *pthis, void *pmfn);
+__forceinline void __stdcall _CallMemberFunction0(void *pthis, void *pmfn)
+{
+	__asm
+	{
+		mov		ecx, pthis
+		call	pmfn
+	}
+}
 
-extern "C" void __stdcall _CallMemberFunction1(void *pthis, void *pmfn, void *pthat);
+__forceinline void __stdcall _CallMemberFunction1(void *pthis, void *pmfn, void *pthat)
+{
+	__asm
+	{
+		push    pthat
+		mov     ecx, pthis
+		call    pmfn
+	}
+}
 
-extern "C" void __stdcall _CallMemberFunction2(void *pthis, void *pmfn, void *pthat, int val2);
+__forceinline void __stdcall _CallMemberFunction2(void *pthis, void *pmfn, void *pthat, int val2)
+{
+	__asm
+	{
+		push	val2
+		push	pthat
+		mov		ecx, pthis
+		call	pmfn
+	}
+}
 
 //
 // Translate an ebp-relative offset to a hard address based on address of
@@ -209,11 +243,18 @@ BOOL _CallSETranslator(EHExceptionRecord*, EHRegistrationNode*, void*, Dispatche
 extern TryBlockMapEntry *_GetRangeOfTrysToCheck(FuncInfo *, int, __ehstate_t, unsigned *, unsigned *);
 extern VOID _DestructExceptionObject(EHExceptionRecord *, BOOLEAN);
 
-#elif defined(_M_AMD64)
+#elif defined(_M_AMD64) || defined(_M_ARM64) || defined(_M_ARM)
+typedef struct FrameInfo {
+	void             *pExceptionObject;
+	struct FrameInfo *pNext;
+
+} FRAMEINFO;
 
 #define _CallMemberFunction0(pthis, pmfn)               (*(VOID(*)(PVOID))pmfn)(pthis)
 #define _CallMemberFunction1(pthis, pmfn, pthat)        (*(VOID(*)(PVOID, PVOID))pmfn)(pthis, pthat)
 #define _CallMemberFunction2(pthis, pmfn, pthat, val2) (*(VOID(*)(PVOID, PVOID, int))pmfn)(pthis, pthat, val2)
+
+#define OffsetToAddress(off, FP)  (void*)(((char*)FP) + off)
 
 #elif defined (_M_MPPC) || defined (_M_PPC)
 typedef struct FrameInfo {

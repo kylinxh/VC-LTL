@@ -13,6 +13,7 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 *size_t wcsxfrm() - Transform a string using locale information
@@ -50,7 +51,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" size_t __cdecl _wcsxfrm_l (
+extern "C" size_t __cdecl _wcsxfrm_l_downlevel (
         wchar_t *_string1,
         const wchar_t *_string2,
         size_t _count,
@@ -75,7 +76,7 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
         return wcslen(_string2);
     }
 
-    if ( 0 == (size = __crtLCMapStringW(
+    if ( 0 == (size = __acrt_LCMapStringW(
                     _lc_collate,
                     LCMAP_SORTKEY,
                     _string2,
@@ -89,7 +90,7 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
     {
         if ( size <= (int)_count)
         {
-            if ( 0 == (size = __crtLCMapStringW(
+            if ( 0 == (size = __acrt_LCMapStringW(
                             _lc_collate,
                             LCMAP_SORTKEY,
                             _string2,
@@ -125,15 +126,18 @@ _END_SECURE_CRT_DEPRECATION_DISABLE
 
     return (size_t)size;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_wcsxfrm_l_downlevel);
+
 #endif
 
-//extern "C" size_t __cdecl wcsxfrm (
-//        wchar_t *_string1,
-//        const wchar_t *_string2,
-//        size_t _count
-//        )
-//{
-//
-//    return _wcsxfrm_l(_string1, _string2, _count, nullptr);
-//}
+/*extern "C" size_t __cdecl wcsxfrm (
+        wchar_t *_string1,
+        const wchar_t *_string2,
+        size_t _count
+        )
+{
+
+    return _wcsxfrm_l(_string1, _string2, _count, nullptr);
+}*/
 

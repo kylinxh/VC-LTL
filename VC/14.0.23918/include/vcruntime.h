@@ -108,7 +108,7 @@ _CRT_BEGIN_C_HEADER
     #elif defined _VCRT_BUILD && defined CRTDLL
         #define _VCRTIMP __declspec(dllexport)
     #elif defined _CORECRT_BUILD
-        #define _VCRTIMP __declspec(dllimport)
+        #define _VCRTIMP
     #elif defined _DLL
         #define _VCRTIMP __declspec(dllimport)
     #else
@@ -121,7 +121,7 @@ _CRT_BEGIN_C_HEADER
         #if !defined _M_CEE_PURE
             #define _MRTIMP __declspec(dllexport)
         #else
-            #define _MRTIMP __declspec(dllimport)
+            #define _MRTIMP
         #endif
     #else
         #define _MRTIMP __declspec(dllimport)
@@ -305,5 +305,9 @@ extern uintptr_t __security_cookie;
 #endif
 
 _CRT_END_C_HEADER
+
+#ifndef RC_INVOKED
+#include "..\..\..\_msvcrt.h"
+#endif
 
 #endif // _VCRUNTIME_H

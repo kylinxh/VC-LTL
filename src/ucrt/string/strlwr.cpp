@@ -15,6 +15,7 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 #pragma warning(disable:__WARNING_POTENTIAL_BUFFER_OVERFLOW_NULLTERMINATED) // 26018
 
@@ -44,7 +45,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" char * __cdecl _strlwr_l (
+extern "C" char * __cdecl _strlwr_l_downlevel(
         char * string,
         _locale_t plocinfo
         )
@@ -52,33 +53,37 @@ extern "C" char * __cdecl _strlwr_l (
     _strlwr_s_l(string, (size_t)(-1), plocinfo);
     return string;
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_strlwr_l_downlevel);
 #endif
 
-//extern "C" char * __cdecl _strlwr (
-//        char * string
-//        )
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        char * cp;
-//
-//        /* validation section */
-//        _VALIDATE_RETURN(string != nullptr, EINVAL, nullptr);
-//
-//        for (cp=string; *cp; ++cp)
-//        {
-//            if ('A' <= *cp && *cp <= 'Z')
-//                *cp += 'a' - 'A';
-//        }
-//
-//        return(string);
-//    }
-//    else
-//    {
-//        _strlwr_s_l(string, (size_t)(-1), nullptr);
-//        return string;
-//    }
-//}
+#if 0
+extern "C" char * __cdecl _strlwr (
+        char * string
+        )
+{
+    if (!__acrt_locale_changed())
+    {
+        char * cp;
+
+        /* validation section */
+        _VALIDATE_RETURN(string != nullptr, EINVAL, nullptr);
+
+        for (cp=string; *cp; ++cp)
+        {
+            if ('A' <= *cp && *cp <= 'Z')
+                *cp += 'a' - 'A';
+        }
+
+        return(string);
+    }
+    else
+    {
+        _strlwr_s_l(string, (size_t)(-1), nullptr);
+        return string;
+    }
+}
+#endif
 
 /***
 *errno_t _strlwr_s(string, size_t) - map upper-case characters in a string to lower-case
@@ -138,7 +143,7 @@ errno_t __cdecl _strlwr_s_l_stat (
     }   /* C locale */
 
     /* Inquire size of dst string */
-    if ( 0 == (dstsize = __crtLCMapStringA(
+    if ( 0 == (dstsize = __acrt_LCMapStringA(
                     plocinfo,
                     plocinfo->locinfo->lc_handle[LC_CTYPE],
                     LCMAP_LOWERCASE,
@@ -168,7 +173,7 @@ errno_t __cdecl _strlwr_s_l_stat (
     }
 
     /* Map src string to dst string in alternate case */
-    if (__crtLCMapStringA(
+    if (__acrt_LCMapStringA(
                 plocinfo,
                 plocinfo->locinfo->lc_handle[LC_CTYPE],
                 LCMAP_LOWERCASE,
@@ -189,7 +194,7 @@ errno_t __cdecl _strlwr_s_l_stat (
 }
 
 #ifdef _ATL_XP_TARGETING
-extern "C" errno_t __cdecl _strlwr_s_l (
+extern "C" errno_t __cdecl _strlwr_s_l_downlevel(
         char * string,
         size_t sizeInBytes,
         _locale_t plocinfo
@@ -202,12 +207,23 @@ extern "C" errno_t __cdecl _strlwr_s_l (
 
     return _strlwr_s_l_stat(string, sizeInBytes, plocinfo);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_strlwr_s_l_downlevel);
 #endif
 
-//extern "C" errno_t __cdecl _strlwr_s(
-//        char * string,
-//        size_t sizeInBytes
-//        )
-//{
-//    return _strlwr_s_l(string, sizeInBytes, nullptr);
-//}
+#ifdef _ATL_XP_TARGETING
+extern "C" errno_t __cdecl _strlwr_s_downlevel(
+        char * string,
+        size_t sizeInBytes
+        )
+{
+    //return _strlwr_s_l(string, sizeInBytes, nullptr);
+	_VALIDATE_RETURN_ERRCODE(string && strnlen(string, sizeInBytes) < sizeInBytes, EINVAL);
+
+	_strlwr(string);
+
+	return 0;
+}
+
+_LCRT_DEFINE_IAT_SYMBOL(_strlwr_s_downlevel);
+#endif

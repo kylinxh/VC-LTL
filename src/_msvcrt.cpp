@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#if defined(NDEBUG)&&defined(_DLL)&&defined(_Build_By_LTL)
+#if defined(NDEBUG)&&defined(__Build_LTL)
+//#define _CRT_BEST_PRACTICES_USAGE
+
 #include <vcruntime_new.h>
 #include <corecrt_terminate.h>
 #include <stdlib.h>
@@ -20,67 +22,47 @@
 #include <sys/stat.h>
 #include <sys/timeb.h>
 #include <sys/utime.h>  
+#include <float.h>
 
 #include <corecrt_math.h>
+#include <msvcrt_IAT.h>
+#include <corecrt_internal.h>
 
-#ifdef __NOTHROW_T_DEFINED
 
-#ifdef __cplusplus
-extern "C++"
+static __forceinline errno_t __cdecl _tcscpy_s(
+	_Out_writes_z_(_SizeInBytes) char*       _Destination,
+	_In_                         rsize_t     _SizeInBytes,
+	_In_z_                       char const* _Source
+	)
 {
-	__forceinline errno_t __cdecl _tcscpy_s(
-		_Out_writes_z_(_SizeInBytes) char*       _Destination,
-		_In_                         rsize_t     _SizeInBytes,
-		_In_z_                       char const* _Source
-		)
-	{
-		return strcpy_s(_Destination, _SizeInBytes, _Source);
-	}
-
-	__forceinline errno_t __cdecl _tcscpy_s(
-		_Out_writes_z_(_SizeInBytes) wchar_t*       _Destination,
-		_In_                         rsize_t     _SizeInBytes,
-		_In_z_                       wchar_t const* _Source
-		)
-	{
-		return wcscpy_s(_Destination, _SizeInBytes, _Source);
-	}
-
-	__forceinline size_t __cdecl _tcslen(
-		_In_z_ char const* _Str
-		)
-	{
-		return strlen(_Str);
-	}
-
-	__forceinline size_t __cdecl _tcslen(
-		_In_z_ wchar_t const* _String
-		)
-	{
-		return wcslen(_String);
-	}
+	return strcpy_s(_Destination, _SizeInBytes, _Source);
 }
-#endif
-#endif
+
+static __forceinline errno_t __cdecl _tcscpy_s(
+	_Out_writes_z_(_SizeInBytes) wchar_t*       _Destination,
+	_In_                         rsize_t     _SizeInBytes,
+	_In_z_                       wchar_t const* _Source
+	)
+{
+	return wcscpy_s(_Destination, _SizeInBytes, _Source);
+}
+
+static __forceinline size_t __cdecl _tcslen(
+	_In_z_ char const* _Str
+	)
+{
+	return strlen(_Str);
+}
+
+static __forceinline size_t __cdecl _tcslen(
+	_In_z_ wchar_t const* _String
+	)
+{
+	return wcslen(_String);
+}
 
 extern "C"
 {
-	/*void __fastcall _guard_check_icall(void*)
-	{
-	}*/
-
-	//切换到系统的msvrct后无需初始化onexit_table，msvcrt.dll内部会初始化
-	bool __cdecl __scrt_initialize_onexit_tables(int const module_type)
-	{
-		return true;
-	}
-
-	/*void __std_terminate(void)
-	{
-		terminate();
-	}*/
-
-
 	struct __crt_stdio_stream_data :public _iobuf
 	{
 		CRITICAL_SECTION _lock;
@@ -89,51 +71,13 @@ extern "C"
 
 	__declspec(dllimport) extern _iobuf _iob[_IOB_ENTRIES];
 
-	FILE* __cdecl __acrt_iob_func(unsigned in)
+	FILE* __cdecl __acrt_iob_func_downlevel(unsigned in)
 	{
 		return &_iob[in];
 	}
 
-	/*unsigned long long __cdecl wcstoull(
-		_In_z_                   wchar_t const* _String,
-		_Out_opt_ _Deref_post_z_ wchar_t**      _EndPtr,
-		_In_                     int            _Radix
-	)
-	{
-		return _wcstoui64(_String, _EndPtr, _Radix);
-	}*/
+	_LCRT_DEFINE_IAT_SYMBOL(__acrt_iob_func_downlevel);
 
-	//系统自带有double，用此将其转换为float
-	float __cdecl strtof(
-		_In_z_                   char const* _String,
-		_Out_opt_ _Deref_post_z_ char**      _EndPtr
-	)
-	{
-#pragma warning(suppress : 4244)
-		return strtod(_String, _EndPtr);
-	}
-
-	float __cdecl wcstof(
-		_In_z_                   wchar_t const* _String,
-		_Out_opt_ _Deref_post_z_ wchar_t**      _EndPtr
-	)
-	{
-#pragma warning(suppress : 4244)
-		return wcstod(_String, _EndPtr);
-	}
-
-	BOOL __cdecl __vcrt_InitializeCriticalSectionEx(
-		LPCRITICAL_SECTION const critical_section,
-		DWORD              const spin_count,
-		DWORD              const flags
-	)
-	{
-#ifdef _ATL_XP_TARGETING
-		return InitializeCriticalSectionAndSpinCount(critical_section, spin_count);
-#else
-		return InitializeCriticalSectionEx(critical_section, spin_count, flags);
-#endif
-	}
 	//int __scrt_debugger_hook_flag = 0;
 
 	//void __cdecl _CRT_DEBUGGER_HOOK(int const reserved)
@@ -289,7 +233,7 @@ extern "C"
 		_invoke_watson(nullptr, nullptr, nullptr, 0, 0);
 	}*/
 
-	/*errno_t __CRTDECL wmemcpy_s(
+	errno_t __CRTDECL wmemcpy_s_downlevel(
 		_Out_writes_to_opt_(_N1, _N) wchar_t*       _S1,
 		_In_                         rsize_t        _N1,
 		_In_reads_opt_(_N)           wchar_t const* _S2,
@@ -299,7 +243,9 @@ extern "C"
 		return memcpy_s(_S1, _N1 * sizeof(wchar_t), _S2, _N * sizeof(wchar_t));
 	}
 
-	errno_t __CRTDECL wmemmove_s(
+	_LCRT_DEFINE_IAT_SYMBOL(wmemcpy_s_downlevel);
+
+	errno_t __CRTDECL wmemmove_s_downlevel(
 			_Out_writes_to_opt_(_N1, _N) wchar_t*       _S1,
 			_In_                         rsize_t        _N1,
 			_In_reads_opt_(_N)           wchar_t const* _S2,
@@ -307,8 +253,9 @@ extern "C"
 		)
 	{
 		return memmove_s(_S1, _N1 * sizeof(wchar_t), _S2, _N * sizeof(wchar_t));
-	}*/
+	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(wmemmove_s_downlevel);
 
 	//	int __cdecl __stdio_common_vswprintf(
 	//		_In_                                    unsigned __int64 _Options,
@@ -345,7 +292,7 @@ extern "C"
 
 #ifdef _ATL_XP_TARGETING
 	extern "C++" template<typename time_t>
-	__forceinline double __cdecl common_difftime(
+	static __forceinline double __cdecl common_difftime(
 		_In_ time_t _Time1,
 		_In_ time_t _Time2
 		)
@@ -358,7 +305,7 @@ extern "C"
 		return static_cast<double>(_Time1 - _Time2);
 	}
 
-	double __cdecl _difftime32(
+	double __cdecl _difftime32_downlevel(
 		_In_ __time32_t _Time1,
 		_In_ __time32_t _Time2
 		)
@@ -366,7 +313,9 @@ extern "C"
 		return common_difftime(_Time1, _Time2);
 	}
 
-	double __cdecl _difftime64(
+	_LCRT_DEFINE_IAT_SYMBOL(_difftime32_downlevel);
+
+	double __cdecl _difftime64_downlevel(
 		_In_ __time64_t _Time1,
 		_In_ __time64_t _Time2
 		)
@@ -374,8 +323,9 @@ extern "C"
 		return common_difftime(_Time1, _Time2);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_difftime64_downlevel);
 
-	struct tm* __cdecl _localtime32(
+	struct tm* __cdecl _localtime32_downlevel(
 		_In_ __time32_t const* _Time
 		)
 	{
@@ -392,18 +342,20 @@ extern "C"
 		return _localtime64(&_Time64);
 	}
 
-	extern "C++" __forceinline struct tm* __cdecl _localtime_t(_In_ __time32_t const* _Time)
+	_LCRT_DEFINE_IAT_SYMBOL(_localtime32_downlevel);
+
+	extern "C++" static __forceinline struct tm* __cdecl _localtime_t(_In_ __time32_t const* _Time)
 	{
 		return _localtime32(_Time);
 	}
 
-	extern "C++" __forceinline struct tm* __cdecl _localtime_t(_In_ __time64_t const* _Time)
+	extern "C++" static __forceinline struct tm* __cdecl _localtime_t(_In_ __time64_t const* _Time)
 	{
 		return _localtime64(_Time);
 	}
 
 	extern "C++" template<typename time_t>
-	__forceinline errno_t __cdecl common_localtime_s(
+	static __forceinline errno_t __cdecl common_localtime_s(
 		_Out_ struct tm*        _Tm,
 		_In_  time_t const* _Time
 		)
@@ -424,7 +376,7 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _localtime32_s(
+	errno_t __cdecl _localtime32_s_downlevel(
 		_Out_ struct tm*        _Tm,
 		_In_  __time32_t const* _Time
 		)
@@ -432,16 +384,35 @@ extern "C"
 		return common_localtime_s(_Tm, _Time);
 	}
 
-	errno_t __cdecl _localtime64_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_localtime32_s_downlevel);
+
+	errno_t __cdecl _localtime64_s_downlevel(
 		_Out_ struct tm*        _Tm,
 		_In_  __time64_t const* _Time
 		)
 	{
 		return common_localtime_s(_Tm, _Time);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_localtime64_s_downlevel);
+
 #endif
 
-	errno_t __cdecl _get_daylight(
+	#undef _daylight
+	__declspec(dllimport) extern int _daylight;
+
+#if !defined _ARM64_ && !defined _ARM_
+	#undef _dstbias
+	__declspec(dllimport) extern long _dstbias;
+#endif
+
+	#undef _timezone
+	__declspec(dllimport) extern long _timezone;
+
+	#undef _tzname
+	__declspec(dllimport) extern char** _tzname;
+
+	errno_t __cdecl _get_daylight_downlevel(
 		_Out_ int* _Daylight
 		)
 	{
@@ -452,7 +423,9 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _get_dstbias(
+	_LCRT_DEFINE_IAT_SYMBOL(_get_daylight_downlevel);
+
+	errno_t __cdecl _get_dstbias_downlevel(
 		_Out_ long* _DaylightSavingsBias
 		)
 	{
@@ -462,7 +435,9 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _get_timezone(
+	_LCRT_DEFINE_IAT_SYMBOL(_get_dstbias_downlevel);
+
+	errno_t __cdecl _get_timezone_downlevel(
 		_Out_ long* _TimeZone
 		)
 	{
@@ -472,7 +447,9 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _get_tzname(
+	_LCRT_DEFINE_IAT_SYMBOL(_get_timezone_downlevel);
+
+	errno_t __cdecl _get_tzname_downlevel(
 		_Out_                        size_t* _ReturnValue,
 		_Out_writes_z_(_SizeInBytes) char*   _Buffer,
 		_In_                         size_t  _SizeInBytes,
@@ -490,9 +467,11 @@ extern "C"
 		_VALIDATE_RETURN_ERRCODE(_ReturnValue != nullptr, EINVAL);
 		_VALIDATE_RETURN_ERRCODE(_Index == 0 || _Index == 1, EINVAL);
 
+		auto& _TmpName = _tzname[_Index];
+
 		// _tzname is correctly inited at startup, so no need to check if
 		// CRT init finished.
-		*_ReturnValue = strlen(_tzname[_Index]) + 1;
+		*_ReturnValue = strlen(_TmpName) + 1;
 
 		// If the buffer pointer is null, the caller is interested only in the size
 		// of the string, not in the actual value of the string:
@@ -502,8 +481,42 @@ extern "C"
 		if (*_ReturnValue > _SizeInBytes)
 			return ERANGE;
 
-		return strcpy_s(_Buffer, _SizeInBytes, _tzname[_Index]);
+		return strcpy_s(_Buffer, _SizeInBytes, _TmpName);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_get_tzname_downlevel);
+
+#if defined _M_AMD64 && defined _ATL_XP_TARGETING
+
+	extern "C" int* __cdecl __daylight_downlevel()
+	{
+		return &_daylight;
+	}
+	_LCRT_DEFINE_IAT_SYMBOL(__daylight_downlevel);
+
+	extern "C" long* __cdecl __dstbias_downlevel()
+	{
+		return &_dstbias;
+	}
+	_LCRT_DEFINE_IAT_SYMBOL(__dstbias_downlevel);
+
+#endif
+
+#if defined _M_AMD64 || defined _M_ARM64
+
+	extern "C" long* __cdecl __timezone_downlevel()
+	{
+		return &_timezone;
+	}
+	_LCRT_DEFINE_IAT_SYMBOL(__timezone_downlevel);
+
+	extern "C" char** __cdecl __tzname_downlevel()
+	{
+		return _tzname;
+	}
+	_LCRT_DEFINE_IAT_SYMBOL(__tzname_downlevel);
+
+#endif
 
 #ifdef _ATL_XP_TARGETING
 	/*
@@ -519,11 +532,11 @@ extern "C"
 	_Origin 其他情况，返回无效参数
 
 	*/
-	int __cdecl _fseeki64(
+	int __cdecl _fseeki64_downlevel(
 		_Inout_ FILE*   _Stream,
 		_In_    __int64 _Offset,
 		_In_    int     _Origin
-	)
+		)
 	{
 		if (_Origin == SEEK_SET)
 		{
@@ -571,6 +584,8 @@ extern "C"
 		}
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_fseeki64_downlevel);
+
 #endif
 
 	//总是返回ture，因为老版本没有此函数，不过以前的 _matherr内部他会判断是否存在
@@ -616,7 +631,7 @@ extern "C"
 
 #ifdef _ATL_XP_TARGETING
 #include <Ntsecapi.h>
-	errno_t __cdecl rand_s(_Out_ unsigned int* _RandomValue)
+	errno_t __cdecl rand_s_downlevel(_Out_ unsigned int* _RandomValue)
 	{
 		*_RandomValue = 0;
 
@@ -630,6 +645,9 @@ extern "C"
 			return 0;
 		}
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(rand_s_downlevel);
+
 #endif
 
 //#ifdef _X86_
@@ -724,7 +742,7 @@ extern "C"
 	}
 
 	// Locks a stdio stream.
-	void __cdecl _lock_file(FILE* const stream)
+	void __cdecl _lock_file_downlevel(FILE* const stream)
 	{
 		if (IsInternalStream(stream))
 			_lock((stream - _iob) + 0x10);
@@ -732,10 +750,11 @@ extern "C"
 			EnterCriticalSection(&((__crt_stdio_stream_data*)stream)->_lock);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_lock_file_downlevel);
 
 
 	// Unlocks a stdio stream.
-	void __cdecl _unlock_file(FILE* const stream)
+	void __cdecl _unlock_file_downlevel(FILE* const stream)
 	{
 		if (IsInternalStream(stream))
 			_unlock((stream - _iob) + 0x10);
@@ -743,8 +762,9 @@ extern "C"
 			LeaveCriticalSection(&((__crt_stdio_stream_data*)stream)->_lock);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_unlock_file_downlevel);
 
-	errno_t __cdecl _get_stream_buffer_pointers(
+	errno_t __cdecl _get_stream_buffer_pointers_downlevel(
 		FILE*   const public_stream,
 		char*** const base,
 		char*** const ptr,
@@ -772,9 +792,11 @@ extern "C"
 		return 0;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_get_stream_buffer_pointers_downlevel);
 
+#if _CRT_NTDDI_MIN < NTDDI_WINBLUE
 	//msvrct仅支持_Strftime，我们可以将通过字符串转换，得到_Wcsftime
-	size_t __cdecl _Wcsftime(
+	size_t __cdecl _Wcsftime_downlevel(
 		wchar_t*       const buffer,
 		size_t         const max_size,
 		wchar_t const* const format,
@@ -838,9 +860,13 @@ extern "C"
 		return Count;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_Wcsftime_downlevel);
 
+#endif
+
+#if _CRT_NTDDI_MIN < NTDDI_WINBLUE
 	//msvrct仅支持_Getdays，我们可以将通过字符串转换，得到_W_Getdays
-	wchar_t* __cdecl _W_Getdays(void)
+	wchar_t* __cdecl _W_Getdays_downlevel(void)
 	{
 		auto szDays = _Getdays();
 		if (!szDays)
@@ -872,8 +898,13 @@ extern "C"
 		}
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_W_Getdays_downlevel);
+
+#endif
+
+#if _CRT_NTDDI_MIN < NTDDI_WINBLUE
 	//msvrct仅支持_Getmonths，我们可以将通过字符串转换，得到_W_Getmonths
-	wchar_t *__cdecl _W_Getmonths(void)
+	wchar_t *__cdecl _W_Getmonths_downlevel(void)
 	{
 		auto szMonths = _Getmonths();
 		if (!szMonths)
@@ -904,6 +935,10 @@ extern "C"
 			return nullptr;
 		}
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_W_Getmonths_downlevel);
+
+#endif
 
 	/*void* __cdecl _W_Gettnames()
 	{
@@ -1011,7 +1046,7 @@ extern "C"
 		return common_stat(_FileHandle, _Stat);
 	}
 
-
+	_LCRT_DEFINE_IAT_SYMBOL(_fstat64i32_downlevel);
 
 	//_stat已经改名为_stat32
 //#pragma push_macro("_stat")
@@ -1058,6 +1093,7 @@ extern "C"
 		return common_stat(_FileName, _Stat);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_stat64i32_light);
 
 	//_wstat已经改名为_wstat32，做转发
 //#pragma push_macro("_wstat")
@@ -1101,6 +1137,8 @@ extern "C"
 	{
 		return common_stat(_FileName, _Stat);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_wstat64i32_light);
 
 	//通过ASCII文件名搜索
 	extern "C++" __forceinline intptr_t __cdecl _tfindfirst(
@@ -1147,7 +1185,7 @@ extern "C"
 	}
 
 	//msvcrt不支持_findfirst64i32，不过我们可以用_findfirst64转换
-	intptr_t __cdecl _findfirst64i32(
+	intptr_t __cdecl _findfirst64i32_downlevel(
 		_In_z_ char const*              _FileName,
 		_Out_  struct _finddata64i32_t* _FindData
 	)
@@ -1155,8 +1193,11 @@ extern "C"
 		return common_findfirst<__finddata64_t>(_FileName, _FindData);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_findfirst64i32_downlevel);
+
+
 	//msvcrt不支持_wfindfirst64i32，不过我们可以用_wfindfirst64转换
-	intptr_t __cdecl _wfindfirst64i32(
+	intptr_t __cdecl _wfindfirst64i32_downlevel(
 		_In_z_ wchar_t const*            _FileName,
 		_Out_  struct _wfinddata64i32_t* _FindData
 	)
@@ -1164,6 +1205,7 @@ extern "C"
 		return common_findfirst<_wfinddata64_t>(_FileName, _FindData);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_wfindfirst64i32_downlevel);
 
 
 	extern "C++" __forceinline int __cdecl _tfindnext(
@@ -1208,7 +1250,7 @@ extern "C"
 		return result;
 	}
 
-	int __cdecl _findnext64i32(
+	int __cdecl _findnext64i32_downlevel(
 		_In_  intptr_t                 _FindHandle,
 		_Out_ struct _finddata64i32_t* _FindData
 	)
@@ -1216,7 +1258,9 @@ extern "C"
 		return common_findnext<__finddata64_t>(_FindHandle, _FindData);
 	}
 
-	int __cdecl _wfindnext64i32(
+	_LCRT_DEFINE_IAT_SYMBOL(_findnext64i32_downlevel);
+
+	int __cdecl _wfindnext64i32_downlevel(
 		_In_  intptr_t                  _FindHandle,
 		_Out_ struct _wfinddata64i32_t* _FindData
 	)
@@ -1224,8 +1268,10 @@ extern "C"
 		return common_findnext<_wfinddata64_t>(_FindHandle, _FindData);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_wfindnext64i32_downlevel);
+
 	//msvcrt没有_ftelli64，不过好在有fgetpos
-	__int64 __cdecl _ftelli64(
+	__int64 __cdecl _ftelli64_downlevel(
 		_Inout_ FILE* _Stream
 	)
 	{
@@ -1241,6 +1287,8 @@ extern "C"
 		}
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_ftelli64_downlevel);
+
 	//	typedef struct {
 	//		long osfhnd;    /* underlying OS file HANDLE */ //CreateFile返回的句柄
 	//		char osfile;    /* attributes of file (e.g., open in text mode?) */
@@ -1252,36 +1300,6 @@ extern "C"
 	//	}   ioinfo;
 	//
 	//	__declspec(dllimport) ioinfo* __pioinfo[];
-	struct _ptd_msvcrt;
-
-	_ptd_msvcrt * __cdecl _getptd_noexit(void);
-
-
-	__declspec(dllimport) void _amsg_exit(
-		int rterrnum
-	);
-
-	_ptd_msvcrt * __cdecl __acrt_getptd(void)  /* return address of per-thread CRT data */
-	{
-		auto ptd = _getptd_noexit();
-
-		if (!ptd)
-		{
-			_amsg_exit(16);
-		}
-
-		return ptd;
-	}
-
-	float __cdecl _strtof_l(
-		_In_z_                   char const* _String,
-		_Out_opt_ _Deref_post_z_ char**      _EndPtr,
-		_In_opt_                 _locale_t   _Locale
-	)
-	{
-		return _strtod_l(_String, _EndPtr, _Locale);
-	}
-
 
 	extern "C++" __forceinline double __cdecl _tatof(char const* const string)
 	{
@@ -1313,12 +1331,14 @@ extern "C"
 
 
 	//msvcrt没有_atoflt，但是我们可以使用atof转换
-	int __cdecl _atoflt(_Out_ _CRT_FLOAT*  _Result, _In_z_ char const* _String)
+	int __cdecl _atoflt_downlevel(_Out_ _CRT_FLOAT*  _Result, _In_z_ char const* _String)
 	{
 		_VALIDATE_RETURN(_Result != nullptr, EINVAL, _DOMAIN);
 
 		return common_atof(_Result->f, _String);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_atoflt_downlevel);
 
 #ifdef _DEBUG
 	#define _BUFFER_FILL_PATTERN _SECURECRT_FILL_BUFFER_PATTERN
@@ -1336,7 +1356,7 @@ extern "C"
 	根据文档https://msdn.microsoft.com/zh-cn/library/hh977173.aspx 以及UCRT源代码确定，fread_s失败时文件位置是未知的。
 	因此我们没有必要事先保存文件指针位置，来提供恢复机制。
 	*/
-    size_t __cdecl fread_s(
+    size_t __cdecl fread_s_downlevel(
         _Out_writes_bytes_to_(_BufferSize, _ElementSize * _ElementCount)   void*  _Buffer,
         _In_range_(>=, _ElementSize * _ElementCount)                       size_t _BufferSize,
         _In_                                                               size_t _ElementSize,
@@ -1399,6 +1419,7 @@ extern "C"
 		return num_read / _ElementSize;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(fread_s_downlevel);
 
 	extern "C++" __forceinline char* __cdecl _tgetenv(
 		_In_z_ char const* _VarName
@@ -1466,7 +1487,7 @@ extern "C"
 		return result;
 	}
 
-	errno_t __cdecl _dupenv_s(
+	errno_t __cdecl _dupenv_s_downlevel(
 		_Outptr_result_buffer_maybenull_(*_BufferCount) _Outptr_result_maybenull_z_ char**      _Buffer,
 		_Out_opt_                                                                   size_t*     _BufferCount,
 		_In_z_                                                                      char const* _VarName
@@ -1475,7 +1496,9 @@ extern "C"
 		return common_tdupenv_s(_Buffer, _BufferCount, _VarName);
 	}
 
-	errno_t __cdecl _wdupenv_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_dupenv_s_downlevel);
+
+	errno_t __cdecl _wdupenv_s_downlevel(
 		_Outptr_result_buffer_maybenull_(*_BufferCount) _Outptr_result_maybenull_z_ wchar_t**      _Buffer,
 		_Out_opt_                                                                   size_t*        _BufferCount,
 		_In_z_                                                                      wchar_t const* _VarName
@@ -1483,6 +1506,8 @@ extern "C"
 	{
 		return common_tdupenv_s(_Buffer, _BufferCount, _VarName);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_wdupenv_s_downlevel);
 
 	//不想额外写类，通过参数强制转换，规避下吧
 	extern "C++"
@@ -1550,7 +1575,7 @@ extern "C"
 		return pBuffer;
 	}
 
-	char* __cdecl gets_s(
+	char* __cdecl gets_s_downlevel(
 		_Out_writes_z_(_Size) char*   _Buffer,
 		_In_                  rsize_t _Size
 		)
@@ -1563,7 +1588,9 @@ extern "C"
 		return result;
 	}
 
-	wchar_t* __cdecl _getws_s(
+	_LCRT_DEFINE_IAT_SYMBOL(gets_s_downlevel);
+
+	wchar_t* __cdecl _getws_s_downlevel(
 		_Out_writes_z_(_BufferCount) wchar_t* _Buffer,
 		_In_                         size_t   _BufferCount
 		)
@@ -1576,6 +1603,8 @@ extern "C"
 		return result;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_getws_s_downlevel);
+
 	//此函数什么都不做，仅供编译通过处理，因此任何调用abort函数必定静默退出。
 	unsigned int __cdecl _set_abort_behavior_downlevel(
 		_In_ unsigned int _Flags,
@@ -1585,9 +1614,11 @@ extern "C"
 		return 0;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_set_abort_behavior_downlevel);
+
 #ifdef _ATL_XP_TARGETING
 
-	errno_t __cdecl _waccess_s(
+	errno_t __cdecl _waccess_s_downlevel(
 		_In_z_ wchar_t const* _FileName,
 		_In_   int            _AccessMode
 		)
@@ -1595,7 +1626,9 @@ extern "C"
 		return _waccess(_FileName, _AccessMode) == 0 ? 0 : errno;
 	}
 
-	errno_t __cdecl _access_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_waccess_s_downlevel);
+
+	errno_t __cdecl _access_s_downlevel(
         _In_z_ char const* _FileName,
         _In_   int         _AccessMode
         )
@@ -1603,7 +1636,9 @@ extern "C"
 		return _access(_FileName, _AccessMode) == 0 ? 0 : errno;
 	}
 
-	errno_t __cdecl _wasctime_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_access_s_downlevel);
+
+	errno_t __cdecl _wasctime_s_downlevel(
 		_Out_writes_z_(_SizeInWords) _Post_readable_size_(26) wchar_t*         _Buffer,
 		_In_range_(>=,26)                                     size_t           _SizeInWords,
 		_In_                                                  struct tm const* _Tm
@@ -1625,7 +1660,9 @@ extern "C"
 		return wcscpy_s(_Buffer, _SizeInWords, szTime);
 	}
 
-	errno_t __cdecl asctime_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wasctime_s_downlevel);
+
+	errno_t __cdecl asctime_s_downlevel(
         _Out_writes_(_SizeInBytes) _Post_readable_size_(26) char*            _Buffer,
         _In_range_(>=,26)                                   size_t           _SizeInBytes,
         _In_                                                struct tm const* _Tm
@@ -1647,8 +1684,9 @@ extern "C"
 		return strcpy_s(_Buffer, _SizeInBytes, szTime);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(asctime_s_downlevel);
 
-	char* __cdecl _ctime32(
+	char* __cdecl _ctime32_downlevel(
 		_In_ __time32_t const* _Time
 		)
 	{
@@ -1665,7 +1703,9 @@ extern "C"
 		return _ctime64(&_Time64);
 	}
 
-	wchar_t* __cdecl _wctime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_ctime32_downlevel);
+
+	wchar_t* __cdecl _wctime32_downlevel(
 		_In_ __time32_t const* _Time
 		)
 	{
@@ -1681,6 +1721,8 @@ extern "C"
 
 		return _wctime64(&_Time64);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_wctime32_downlevel);
 
 	extern "C++" __forceinline void __cdecl _ctime_t(
 		_In_ __time32_t const* _Time,
@@ -1701,7 +1743,7 @@ extern "C"
 	extern "C++" __forceinline void __cdecl _ctime_t(
 		_In_ __time32_t const* _Time,
 		wchar_t* & szTime
-	)
+		)
 	{
 		szTime = _wctime32(_Time);
 	}
@@ -1709,7 +1751,7 @@ extern "C"
 	extern "C++" __forceinline void __cdecl _ctime_t(
 		_In_ __time64_t const* _Time,
 		wchar_t* & szTime
-	)
+		)
 	{
 		szTime = _wctime64(_Time);
 	}
@@ -1739,7 +1781,7 @@ extern "C"
 		return _tcscpy_s(_Buffer, _Size, szTime);
 	}
 
-	errno_t __cdecl _ctime32_s(
+	errno_t __cdecl _ctime32_s_downlevel(
 		_Out_writes_(_SizeInBytes) _Post_readable_size_(26) char*             _Buffer,
 		_In_range_(>= , 26)                                   size_t            _SizeInBytes,
 		_In_                                                __time32_t const* _Time
@@ -1748,7 +1790,9 @@ extern "C"
 		return common_ctime_s(_Buffer, _SizeInBytes, _Time);
 	}
 
-	errno_t __cdecl _ctime64_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_ctime32_s_downlevel);
+
+	errno_t __cdecl _ctime64_s_downlevel(
 		_Out_writes_z_(_SizeInBytes) _Post_readable_size_(26) char*             _Buffer,
 		_In_range_(>= , 26)                                     size_t            _SizeInBytes,
 		_In_                                                  __time64_t const* _Time
@@ -1757,7 +1801,9 @@ extern "C"
 		return common_ctime_s(_Buffer, _SizeInBytes, _Time);
 	}
 
-	errno_t __cdecl _wctime32_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_ctime64_s_downlevel);
+
+	errno_t __cdecl _wctime32_s_downlevel(
 		_Out_writes_z_(_SizeInWords) _Post_readable_size_(26) wchar_t*          _Buffer,
 		_In_  _In_range_(>= , 26)                              size_t            _SizeInWords,
 		_In_                                                  __time32_t const* _Time
@@ -1766,7 +1812,9 @@ extern "C"
 		return common_ctime_s(_Buffer, _SizeInWords, _Time);
 	}
 
-	errno_t __cdecl _wctime64_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wctime32_s_downlevel);
+
+	errno_t __cdecl _wctime64_s_downlevel(
 		_Out_writes_z_(_SizeInWords) _Post_readable_size_(26) wchar_t*          _Buffer,
 		_In_  _In_range_(>= , 26)                              size_t            _SizeInWords,
 		_In_                                                  __time64_t const* _Time
@@ -1775,7 +1823,9 @@ extern "C"
 		return common_ctime_s(_Buffer, _SizeInWords, _Time);
 	}
 
-	struct tm* __cdecl _gmtime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_wctime64_s_downlevel);
+
+	struct tm* __cdecl _gmtime32_downlevel(
 		_In_ __time32_t const* _Time
 		)
 	{
@@ -1792,6 +1842,8 @@ extern "C"
 
 		return _gmtime64(&_Time64);
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_gmtime32_downlevel);
 
 	extern "C++" __forceinline struct tm* __cdecl _gmtime_t(
 		_In_  __time32_t const* _Time
@@ -1828,7 +1880,7 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _gmtime32_s(
+	errno_t __cdecl _gmtime32_s_downlevel(
 		_Out_ struct tm*        _Tm,
 		_In_  __time32_t const* _Time
 		)
@@ -1836,7 +1888,9 @@ extern "C"
 		return common_gmtime_t_s(_Tm, _Time);
 	}
 
-	errno_t __cdecl _gmtime64_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_gmtime32_s_downlevel);
+
+	errno_t __cdecl _gmtime64_s_downlevel(
 		_Out_ struct tm*        _Tm,
 		_In_  __time64_t const* _Time
 		)
@@ -1844,8 +1898,9 @@ extern "C"
 		return common_gmtime_t_s(_Tm, _Time);
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_gmtime64_s_downlevel);
 
-	__time64_t __cdecl _mkgmtime64(
+	__time64_t __cdecl _mkgmtime64_downlevel(
 		_Inout_ struct tm* _Tm
 		)
 	{
@@ -1876,7 +1931,9 @@ extern "C"
 		return time;
 	}
 
-	__time32_t __cdecl _mkgmtime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_mkgmtime64_downlevel);
+
+	__time32_t __cdecl _mkgmtime32_downlevel(
 		_Inout_ struct tm* _Tm
 		)
 	{
@@ -1897,7 +1954,9 @@ extern "C"
 		return Time;
 	}
 
-	__time32_t __cdecl _mktime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_mkgmtime32_downlevel);
+
+	__time32_t __cdecl _mktime32_downlevel(
 		_Inout_ struct tm* _Tm
 		)
 	{
@@ -1917,6 +1976,8 @@ extern "C"
 
 		return Time;
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_mktime32_downlevel);
 
 	extern "C++" template<typename TCHAR>
 	__forceinline errno_t __cdecl common_getenv_s_nolock(
@@ -1972,7 +2033,7 @@ extern "C"
 		return result;
 	}
 
-	errno_t __cdecl getenv_s(
+	errno_t __cdecl getenv_s_downlevel(
         _Out_                            size_t*     _RequiredCount,
         _Out_writes_opt_z_(_BufferCount) char*       _Buffer,
         _In_                             rsize_t     _BufferCount,
@@ -1982,7 +2043,9 @@ extern "C"
 		return common_getenv_s(_RequiredCount, _Buffer, _BufferCount, _VarName);
 	}
 
-	errno_t __cdecl _wgetenv_s(
+	_LCRT_DEFINE_IAT_SYMBOL(getenv_s_downlevel);
+
+	errno_t __cdecl _wgetenv_s_downlevel(
 		_Out_                            size_t*        _RequiredCount,
 		_Out_writes_opt_z_(_BufferCount) wchar_t*       _Buffer,
 		_In_                             size_t         _BufferCount,
@@ -1992,7 +2055,9 @@ extern "C"
 		return common_getenv_s(_RequiredCount, _Buffer, _BufferCount, _VarName);
 	}
 
-	errno_t __cdecl fopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wgetenv_s_downlevel);
+
+	errno_t __cdecl fopen_s_downlevel(
 		_Outptr_result_maybenull_ FILE**      _Stream,
 		_In_z_                    char const* _FileName,
 		_In_z_                    char const* _Mode
@@ -2003,7 +2068,9 @@ extern "C"
 		return (*_Stream = fopen(_FileName, _Mode)) ? 0 : errno;
 	}
 
-	errno_t __cdecl _wfopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(fopen_s_downlevel);
+
+	errno_t __cdecl _wfopen_s_downlevel(
 		_Outptr_result_maybenull_ FILE**         _Stream,
 		_In_z_                    wchar_t const* _FileName,
 		_In_z_                    wchar_t const* _Mode
@@ -2014,7 +2081,9 @@ extern "C"
 		return (*_Stream = _wfopen(_FileName, _Mode)) ? 0 : errno;
 	}
 
-	errno_t __cdecl freopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wfopen_s_downlevel);
+
+	errno_t __cdecl freopen_s_downlevel(
 		_Outptr_result_maybenull_ FILE**      _Stream,
 		_In_z_                    char const* _FileName,
 		_In_z_                    char const* _Mode,
@@ -2026,7 +2095,9 @@ extern "C"
 		return (*_Stream = freopen(_FileName, _Mode, _OldStream)) ? 0 : errno;
 	}
 
-	errno_t __cdecl _wfreopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(freopen_s_downlevel);
+
+	errno_t __cdecl _wfreopen_s_downlevel(
 		_Outptr_result_maybenull_ FILE**         _Stream,
 		_In_z_                    wchar_t const* _FileName,
 		_In_z_                    wchar_t const* _Mode,
@@ -2038,13 +2109,12 @@ extern "C"
 		return (*_Stream = _wfreopen(_FileName, _Mode, _OldStream)) ? 0 : errno;
 	}
 
-	errno_t __cdecl _ftime32_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wfreopen_s_downlevel);
+
+	void __cdecl _ftime32_downlevel(
 		_Out_ struct __timeb32* _Time
 		)
 	{
-		_VALIDATE_RETURN_ERRCODE(_Time != nullptr, EINVAL);
-
-
 		__timeb64 _Time64;
 		_ftime64(&_Time64);
 
@@ -2052,10 +2122,24 @@ extern "C"
 		_Time->millitm = _Time64.millitm;
 		_Time->timezone = _Time64.timezone;
 		_Time->dstflag = _Time64.dstflag;
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_ftime32_downlevel);
+
+	errno_t __cdecl _ftime32_s_downlevel(
+		_Out_ struct __timeb32* _Time
+		)
+	{
+		_VALIDATE_RETURN_ERRCODE(_Time != nullptr, EINVAL);
+
+		_ftime32_downlevel(_Time);
+		
 		return 0;
 	}
 
-	errno_t __cdecl _ftime64_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_ftime32_s_downlevel);
+
+	errno_t __cdecl _ftime64_s_downlevel(
 		_Out_ struct __timeb64* _Time
 		)
 	{
@@ -2066,14 +2150,9 @@ extern "C"
 		return 0;
 	}
 
-	void __cdecl _ftime32(
-		_Out_ struct __timeb32* _Time
-		)
-	{
-		_ftime32_s(_Time);
-	}
+	_LCRT_DEFINE_IAT_SYMBOL(_ftime64_s_downlevel);
 
-	int __cdecl _futime32(
+	int __cdecl _futime32_downlevel(
 		_In_     int                 _FileHandle,
 		_In_opt_ struct __utimbuf32* _Time
 		)
@@ -2089,7 +2168,9 @@ extern "C"
 		return _futime64(_FileHandle, _Time ? &_Time64 : nullptr);
 	}
 
-	int __cdecl _utime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_futime32_downlevel);
+
+	int __cdecl _utime32_downlevel(
 		_In_z_   char const*         _FileName,
 		_In_opt_ struct __utimbuf32* _Time
 		)
@@ -2105,7 +2186,9 @@ extern "C"
 		return _utime64(_FileName, _Time ? &_Time64 : nullptr);
 	}
 
-	int __cdecl _wutime32(
+	_LCRT_DEFINE_IAT_SYMBOL(_utime32_downlevel);
+
+	int __cdecl _wutime32_downlevel(
 		_In_z_   wchar_t const*      _FileName,
 		_In_opt_ struct __utimbuf32* _Time
 		)
@@ -2121,7 +2204,9 @@ extern "C"
 		return _wutime64(_FileName, _Time ? &_Time64 : nullptr);
 	}
 
-	errno_t __cdecl clearerr_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wutime32_downlevel);
+
+	errno_t __cdecl clearerr_s_downlevel(
 		_Inout_ FILE* _Stream
 		)
 	{
@@ -2130,6 +2215,7 @@ extern "C"
 		return errno;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(clearerr_s_downlevel);
 
 	extern "C++" __forceinline int __cdecl _tputenv(
 		_In_z_ wchar_t const* _EnvString
@@ -2171,7 +2257,7 @@ extern "C"
 		return result;
 	}
 
-	errno_t __cdecl _putenv_s(
+	errno_t __cdecl _putenv_s_downlevel(
 		_In_z_ char const* _Name,
 		_In_z_ char const* _Value
 		)
@@ -2179,7 +2265,9 @@ extern "C"
 		return common_putenv_s(_Name, _Value);
 	}
 
-	errno_t __cdecl _wputenv_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_putenv_s_downlevel);
+
+	errno_t __cdecl _wputenv_s_downlevel(
 		_In_z_ wchar_t const* _Name,
 		_In_z_ wchar_t const* _Value
 		)
@@ -2187,7 +2275,9 @@ extern "C"
 		return common_putenv_s(_Name, _Value);
 	}
 
-	errno_t __cdecl tmpnam_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wputenv_s_downlevel);
+
+	errno_t __cdecl tmpnam_s_downlevel(
 		_Out_writes_z_(_Size) char*   _Buffer,
 		_In_                  rsize_t _Size
 		)
@@ -2209,7 +2299,9 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _wtmpnam_s(
+	_LCRT_DEFINE_IAT_SYMBOL(tmpnam_s_downlevel);
+
+	errno_t __cdecl _wtmpnam_s_downlevel(
 		_Out_writes_z_(_BufferCount) wchar_t* _Buffer,
 		_In_                         size_t   _BufferCount
 		)
@@ -2231,7 +2323,9 @@ extern "C"
 		return 0;
 	}
 
-	errno_t __cdecl _sopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_wtmpnam_s_downlevel);
+
+	errno_t __cdecl _sopen_s_downlevel(
 		_Out_  int*        _FileHandle,
 		_In_z_ char const* _FileName,
 		_In_   int         _OpenFlag,
@@ -2248,10 +2342,12 @@ extern "C"
 		_VALIDATE_RETURN_ERRCODE((_PermissionMode & (~(_S_IREAD | _S_IWRITE))) == 0, EINVAL);
 
 
-		return (*_FileHandle = sopen(_FileName, _OpenFlag, _ShareFlag, _PermissionMode)) == -1 ? errno : 0;
+		return (*_FileHandle = _sopen(_FileName, _OpenFlag, _ShareFlag, _PermissionMode)) == -1 ? errno : 0;
 	}
 
-	errno_t __cdecl _wsopen_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_sopen_s_downlevel);
+
+	errno_t __cdecl _wsopen_s_downlevel(
 		_Out_  int*           _FileHandle,
 		_In_z_ wchar_t const* _FileName,
 		_In_   int            _OpenFlag,
@@ -2271,9 +2367,10 @@ extern "C"
 		return (*_FileHandle = _wsopen(_FileName, _OpenFlag, _ShareFlag, _PermissionFlag)) == -1 ? errno : 0;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_wsopen_s_downlevel);
 
 	//行为略微跟原版不同，当参数不合法时，不会返回 _OldMode
-	errno_t __cdecl _umask_s(
+	errno_t __cdecl _umask_s_downlevel(
 		_In_  int  _NewMode,
 		_Out_ int* _OldMode
 		)
@@ -2286,8 +2383,9 @@ extern "C"
 		return 0;
 	}
 
+	_LCRT_DEFINE_IAT_SYMBOL(_umask_s_downlevel);
 
-	errno_t __cdecl _strerror_s(
+	errno_t __cdecl _strerror_s_downlevel(
 		_Out_writes_z_(_SizeInBytes) char*       _Buffer,
 		_In_                         size_t      _SizeInBytes,
 		_In_opt_z_                   char const* _ErrorMessage
@@ -2306,7 +2404,9 @@ extern "C"
 		return _tcscpy_s(_Buffer, _SizeInBytes, szError);
 	}
 
-	errno_t __cdecl __wcserror_s(
+	_LCRT_DEFINE_IAT_SYMBOL(_strerror_s_downlevel);
+
+	errno_t __cdecl __wcserror_s_downlevel(
 		_Out_writes_opt_z_(_SizeInWords) wchar_t*       _Buffer,
 		_In_                             size_t         _SizeInWords,
 		_In_z_                           wchar_t const* _ErrorMessage
@@ -2324,56 +2424,499 @@ extern "C"
 
 		return _tcscpy_s(_Buffer, _SizeInWords, szError);
 	}
-#endif
-}
 
-#ifdef __cplusplus
-extern "C++"
-{
-	//void* __CRTDECL operator new(
-	//	size_t _Size
-	//	)
-	//{
-	//	return malloc(_Size);
-	//}
+	_LCRT_DEFINE_IAT_SYMBOL(__wcserror_s_downlevel);
 
-	//void* __CRTDECL operator new[](
-	//		size_t _Size
-	//		)
-	//{
-	//	return malloc(_Size);
-	//}
+	_ACRTIMP void __cdecl _assert(
+		_In_z_ char const* _Message,
+		_In_z_ char const* _File,
+		_In_   unsigned       _Line
+	);
 
-	//void __CRTDECL operator delete(
-	//		void* _Block
-	//		) throw()
-	//{
-	//	free(_Block);
-	//}
 
-	//void __CRTDECL operator delete[](
-	//	void* _Block
-	//	)
-	//{
-	//	free(_Block);
-	//}
-
-	void __CRTDECL operator delete(
-			void*  _Block,
-			size_t _Size
-			)
+	//WinXP不支持_wassert，因此我们通过字符串转换再调用_assert实现。
+	void __cdecl _wassert_downlevel(
+		_In_z_ wchar_t const* _Message,
+		_In_z_ wchar_t const* _File,
+		_In_   unsigned       _Line
+	)
 	{
-		operator delete(_Block);
+		//VC-LTL只针提供Release编译，因此此函数单纯做中断程序处理。
+		_assert(nullptr, nullptr, _Line);
 	}
 
-	void __CRTDECL operator delete[](
-		void* _Block,
-		size_t _Size
+	_LCRT_DEFINE_IAT_SYMBOL(_wassert_downlevel);
+
+#endif
+	
+#ifdef _M_IX86
+	extern int __isa_available;
+
+	extern unsigned int __cdecl __get_fpsr_sse2();
+
+	static __forceinline unsigned int __cdecl __statusfp_sse2()
+	{
+		auto fpsr_sse2 = __get_fpsr_sse2();
+
+		unsigned int result = 0;
+
+		if (fpsr_sse2 & 0x3F)
+		{
+			if (fpsr_sse2 & 0x01)
+				result |= 0x10;
+
+			if (fpsr_sse2 & 0x02)
+				result |= 0x80000;
+
+			if (fpsr_sse2 & 0x04)
+				result |= 0x8;
+
+			if (fpsr_sse2 & 0x08)
+				result |= 0x4;
+
+			if (fpsr_sse2 & 0x10)
+				result |= 0x2;
+
+			if (fpsr_sse2 & 0x20)
+				result |= 0x1;
+		}
+
+		return result;
+	}
+
+	void __cdecl _statusfp2_downlevel(
+		_Out_opt_ unsigned int* _X86Status,
+		_Out_opt_ unsigned int* _SSE2Status
 		)
 	{
-		operator delete[](_Block);
+		if (_X86Status)
+		{
+			unsigned short FpuStatus;
+
+			__asm { fstsw FpuStatus };
+
+			unsigned int dwX86Status = 0;
+
+			if (FpuStatus & 0x3F)
+			{
+				if (FpuStatus & 0x01)
+					dwX86Status |= 0x10;
+
+				if (FpuStatus & 0x02)
+					dwX86Status |= 0x80000;
+
+				if (FpuStatus & 0x04)
+					dwX86Status |= 0x08;
+
+				if (FpuStatus & 0x08)
+					dwX86Status |= 0x04;
+
+				if (FpuStatus & 0x10)
+					dwX86Status |= 0x02;
+
+				if (FpuStatus & 0x20)
+					dwX86Status |= 0x01;
+			}
+
+			*_X86Status = dwX86Status;
+		}
+
+		if (_SSE2Status)
+			*_SSE2Status = __statusfp_sse2();
 	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_statusfp2_downlevel);
+
+
+	static unsigned short __cdecl _hw_cw(unsigned int  _NewValue)
+	{
+		unsigned int result = 0;
+
+		if (_NewValue & 0x10)
+			result = 0x1;
+
+		if (_NewValue & 0x8)
+			result |= 0x4;
+
+		if (_NewValue & 0x4)
+			result |= 0x8;
+
+		if (_NewValue & 0x2)
+			result |= 0x10;
+
+		if (_NewValue & 0x1)
+			result |= 0x20;
+
+		if (_NewValue & 0x80000)
+			result |= 0x2;
+
+		if (_NewValue & 0x100)
+			result |= 0x400;
+
+		if (_NewValue & 0x200)
+			result |= 0x800;
+
+		if ((_NewValue & 0x30000)== 0x10000)
+			result |= 0x200;
+		else
+			result |= 0x300;
+
+		if (_NewValue & 0x40000)
+			result |= 0x1000;
+
+		return result;
+	}
+
+	static unsigned int __cdecl __hw_cw_sse2(unsigned int Sse2ControlWord)
+	{
+		unsigned int result = 0;
+
+		if (Sse2ControlWord & 0x10)
+			result = 0x80;
+		if (Sse2ControlWord & 0x08)
+			result |= 0x200u;
+		if (Sse2ControlWord & 0x04)
+			result |= 0x400u;
+		if (Sse2ControlWord & 0x02)
+			result |= 0x800u;
+		if (Sse2ControlWord & 0x01)
+			result |= 0x1000u;
+		if (Sse2ControlWord & 0x80000)
+			result |= 0x100u;
+
+		if (Sse2ControlWord & 0x100)
+			result |= 0x2000u;
+
+		if (Sse2ControlWord & 0x200)
+			result |= 0x4000u;
+
+		
+		switch (Sse2ControlWord & 0x3000000)
+		{
+		case 0x1000000:
+			result |= 0x8040u;
+			break;
+		case 0x2000000:
+			result |= 0x40u;
+			break;
+		case 0x3000000:
+			result |= 0x8000u;
+			break;
+		default:
+			break;
+		}
+
+		return result;
+	}
+
+	static unsigned int __fastcall FpuStatusToX86ControlWord(unsigned short FpuStatus)
+	{
+		unsigned int CurrentX86ControlWord = 0;
+
+		if (FpuStatus & 0x1)
+			CurrentX86ControlWord |= 0x10;
+
+		if (FpuStatus & 0x2)
+			CurrentX86ControlWord |= 0x80000;
+
+		if (FpuStatus & 0x4)
+			CurrentX86ControlWord |= 0x8;
+
+		if (FpuStatus & 0x8)
+			CurrentX86ControlWord |= 0x4;
+
+		if (FpuStatus & 0x10)
+			CurrentX86ControlWord |= 0x2;
+
+		if (FpuStatus & 0x20)
+			CurrentX86ControlWord |= 0x1;
+
+
+		if (FpuStatus & 0x400)
+			CurrentX86ControlWord |= 0x100;
+
+		if (FpuStatus & 0x800)
+			CurrentX86ControlWord |= 0x200;
+
+		if ((FpuStatus & 0x300) == 0x200)
+		{
+			CurrentX86ControlWord |= 0x10000;
+		}
+		else
+		{
+			CurrentX86ControlWord |= 0x20000;
+		}
+
+		if (FpuStatus & 0x1000)
+		{
+			CurrentX86ControlWord |= 0x40000;
+		}
+
+		return CurrentX86ControlWord;
+	}
+
+	static unsigned int __fastcall Sse2StatusToSse2ControlWord(unsigned int Sse2Status)
+	{
+		unsigned int Sse2ControlWord = 0;
+
+		if (Sse2Status & 0x8000)
+			Sse2ControlWord = 0x10;
+
+		if (Sse2Status & 0x200)
+			Sse2ControlWord |= 0x8;
+
+		if (Sse2Status & 0x400)
+			Sse2ControlWord |= 0x4;
+
+		if (Sse2Status & 0x800)
+			Sse2ControlWord |= 0x2;
+
+		if (Sse2Status & 0x1000)
+			Sse2ControlWord |= 0x1;
+
+		if (Sse2Status & 0x100)
+			Sse2ControlWord |= 0x80000;
+
+		if (Sse2Status & 0x2000)
+			Sse2ControlWord |= 0x100;
+
+		if (Sse2Status & 0x4000)
+			Sse2ControlWord |= 0x200;
+
+
+		switch (Sse2Status & 0x8040)
+		{
+		case 0x40:
+			Sse2ControlWord |= 0x2000000;
+			break;
+		case 0x8000:
+			Sse2ControlWord |= 0x3000000;
+			break;
+		case 0x8040:
+			Sse2ControlWord |= 0x1000000;
+			break;
+		default:
+			break;
+		}
+
+		return Sse2ControlWord;
+	}
+
+	extern void __cdecl __set_fpsr_sse2(unsigned int);
+
+	int __cdecl __control87_2_downlevel(
+		_In_      unsigned int  _NewValue,
+		_In_      unsigned int  _Mask,
+		_Out_opt_ unsigned int* _X86ControlWord,
+		_Out_opt_ unsigned int* _Sse2ControlWord
+		)
+	{
+		_NewValue &= _Mask;
+
+		if (_X86ControlWord)
+		{
+			unsigned short FpuStatus;
+
+			__asm { fstcw FpuStatus };
+
+			unsigned int CurrentX86ControlWord = FpuStatusToX86ControlWord(FpuStatus);
+
+
+			auto NewX86ControlWord = (_NewValue) | (CurrentX86ControlWord&~_Mask);
+
+
+			if (NewX86ControlWord != CurrentX86ControlWord)
+			{
+				FpuStatus = _hw_cw(NewX86ControlWord);
+
+				__asm
+				{
+					fldcw FpuStatus
+					fstcw FpuStatus
+				}
+
+				NewX86ControlWord = FpuStatusToX86ControlWord(FpuStatus);
+			}
+
+			*_X86ControlWord = NewX86ControlWord;
+		}
+
+
+		if (_Sse2ControlWord)
+		{
+			if (__isa_available < 1)
+			{
+				*_Sse2ControlWord = 0;
+			}
+			else
+			{
+				auto CurrentSse2ControlWord = Sse2StatusToSse2ControlWord(_mm_getcsr());
+
+				auto NewSse2ControlWord = (_NewValue & 0x308031F) | (CurrentSse2ControlWord&~(_Mask & 0x308031F));
+
+				if (NewSse2ControlWord != CurrentSse2ControlWord)
+				{
+					__set_fpsr_sse2(__hw_cw_sse2(NewSse2ControlWord));
+
+					CurrentSse2ControlWord= Sse2StatusToSse2ControlWord(_mm_getcsr());
+				}
+
+				*_Sse2ControlWord = CurrentSse2ControlWord;
+			}
+		}
+
+		return 1;
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(__control87_2_downlevel);
+
+#endif
+
+#undef _sys_nerr
+#undef _sys_errlist
+
+	extern "C" __declspec(dllimport) extern char const* const _sys_errlist[];
+	extern "C" __declspec(dllimport) extern int const _sys_nerr;
+
+	extern "C" int* __cdecl __sys_nerr_downlevel()
+	{
+		return const_cast<int*>(&_sys_nerr);
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(__sys_nerr_downlevel);
+
+	extern "C" char** __cdecl __sys_errlist_downlevel()
+	{
+		return const_cast<char**>(_sys_errlist);
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(__sys_errlist_downlevel);
+
+#if defined _M_AMD64 || defined _M_ARM64 || defined _M_ARM
+
+	extern "C" unsigned char* __cdecl __p__mbctype_downlevel()
+	{
+		return _mbctype;
+	}
+	_LCRT_DEFINE_IAT_SYMBOL(__p__mbctype_downlevel);
+
+	extern "C" unsigned char* __cdecl __p__mbcasemap_downlevel()
+	{
+		return _mbcasemap;
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(__p__mbcasemap_downlevel);
+
+	#undef _environ
+	#undef _wenviron
+
+#if defined _ARM64_ || defined _ARM_
+	extern "C" extern char **    _environ;
+	extern "C" extern wchar_t ** _wenviron;
+#else
+	extern "C" __declspec(dllimport) extern char **    _environ;
+	extern "C" __declspec(dllimport) extern wchar_t ** _wenviron;
+#endif
+
+	extern "C" char***    __cdecl __p__environ_downlevel() { return &_environ; }
+	_LCRT_DEFINE_IAT_SYMBOL(__p__environ_downlevel);
+
+	extern "C" wchar_t*** __cdecl __p__wenviron_downlevel() { return &_wenviron; }
+	_LCRT_DEFINE_IAT_SYMBOL(__p__wenviron_downlevel);
+
+
+#endif
+
+#if _CRT_NTDDI_MIN >= NTDDI_WIN6
+	//Vista以及以上版本才存在_wcsftime_l，因此只在Vista以上模式输出此函数
+	extern "C" size_t __cdecl _strftime_l_downlevel(
+		char*       const string,
+		size_t      const maxsize,
+		char const* const format,
+		tm const*   const timeptr,
+		_locale_t   const locale
+		)
+	{
+		if (!locale)
+			return strftime(string, maxsize, format, timeptr);
+
+		unsigned int const lc_time_cp = locale->locinfo->_locale_lc_codepage;
+
+		_VALIDATE_RETURN(string != nullptr, EINVAL, 0)
+		_VALIDATE_RETURN(maxsize != 0,      EINVAL, 0)
+		*string = '\0';
+
+		_VALIDATE_RETURN(format != nullptr,  EINVAL, 0)
+		_VALIDATE_RETURN(timeptr != nullptr, EINVAL, 0)
+
+		
+		auto cwFormat = MultiByteToWideChar(
+			lc_time_cp,
+            MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
+			format,
+            -1,
+			nullptr,
+            0
+            );
+
+		if (cwFormat == 0)
+			return 0;
+
+		__crt_scoped_stack_ptr<wchar_t> wformat(_malloca_crt_t(wchar_t, cwFormat));
+		if (!wformat)
+			return 0;
+
+		if (MultiByteToWideChar(
+			lc_time_cp,
+			MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
+			format,
+			-1,
+			wformat.get(),
+			cwFormat
+			)==0)
+		{
+			errno = EINVAL;
+			return 0;
+		}
+
+
+
+		__crt_scoped_stack_ptr<wchar_t> wstring(_malloca_crt_t(wchar_t, maxsize));
+
+		if (!wstring)
+			return 0;
+
+		size_t const wcsftime_result = _wcsftime_l(wstring.get(), maxsize, wformat.get(), timeptr, locale);
+		if (wcsftime_result == 0)
+		{
+			return 0;
+		}
+
+
+		auto string_used = WideCharToMultiByte(
+			lc_time_cp,
+			0,
+			wstring.get(),
+			-1,
+			string,
+			maxsize,
+			nullptr,
+			nullptr
+		);
+
+		//缓冲区不足或者缓冲区不足以容纳
+		if (string_used == 0 || string_used > maxsize)
+			return 0;
+
+
+		// The WideCharToMultiByte result includes the null terminator; the strftime
+		// function result does not:
+		return string_used - 1;
+	}
+
+	_LCRT_DEFINE_IAT_SYMBOL(_strftime_l_downlevel);
+
+#endif
 }
-#endif // !__cplusplus
 
 #endif //NDEBUG&&_DLL&&__NO_LTL_LIB

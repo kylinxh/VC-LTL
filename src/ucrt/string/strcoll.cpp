@@ -12,6 +12,7 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 *int strcoll() - Collate locale strings
@@ -38,7 +39,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _strcoll_l (
+extern "C" int __cdecl _strcoll_l_downlevel (
         const char *_string1,
         const char *_string2,
         _locale_t plocinfo
@@ -57,7 +58,7 @@ extern "C" int __cdecl _strcoll_l (
     if ( plocinfo->locinfo->lc_handle[LC_COLLATE] == 0 )
             return strcmp(_string1, _string2);
 
-    if ( 0 == (ret = __crtCompareStringA(
+    if ( 0 == (ret = __acrt_CompareStringA(
                     plocinfo, plocinfo->locinfo->lc_handle[LC_COLLATE],
                                SORT_STRINGSORT,
                                _string1,
@@ -73,12 +74,15 @@ extern "C" int __cdecl _strcoll_l (
     return (ret - 2);
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_strcoll_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl strcoll (
-//        const char *_string1,
-//        const char *_string2
-//        )
-//{
-//    return _strcoll_l(_string1, _string2, nullptr);
-//}
+/*extern "C" int __cdecl strcoll (
+        const char *_string1,
+        const char *_string2
+        )
+{
+    return _strcoll_l(_string1, _string2, nullptr);
+}*/

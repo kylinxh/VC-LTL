@@ -13,6 +13,7 @@
 
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
+#include <msvcrt_IAT.h>
 
 /***
 *int _mbbtype(c, ctype) - Return type of byte based on previous byte (MBCS)
@@ -33,11 +34,17 @@
 *
 *       _MBC_ILLEGAL   = if illegal char
 *
+*WARNING:
+*       These fail for UTF-8, which doesn't have lead bytes matched with single
+*       trail bytes as this function expects.
+*
+*       Applications should not be trying to reverse engineer how any encoding works.
+*
 *Exceptions:
 *
 *******************************************************************************/
 
-extern "C" int __cdecl _mbbtype_l(
+extern "C" int __cdecl _mbbtype_l_downlevel(
     unsigned char const c,
     int           const ctype,
     _locale_t     const locale
@@ -71,7 +78,9 @@ extern "C" int __cdecl _mbbtype_l(
     }
 }
 
-//extern "C" int __cdecl _mbbtype(unsigned char const c, int const ctype)
-//{
-//    return _mbbtype_l(c, ctype, nullptr);
-//}
+_LCRT_DEFINE_IAT_SYMBOL(_mbbtype_l_downlevel);
+
+/*extern "C" int __cdecl _mbbtype(unsigned char const c, int const ctype)
+{
+    return _mbbtype_l(c, ctype, nullptr);
+}*/

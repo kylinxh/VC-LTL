@@ -4,7 +4,7 @@
 *       Copyright (c) Microsoft Corporation. All rights reserved.
 *
 *Purpose:
-*       defines _memicmp() - compare two blocks of memory for lexical
+*       defines _memicmp() - compare two blocks of memory for ordinal
 *       order.  Case is ignored in the comparison.
 *
 *******************************************************************************/
@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <string.h>
+#include <msvcrt_IAT.h>
 
 /***
 *int _memicmp(first, last, count) - compare two blocks of memory, ignore case
@@ -39,7 +40,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _memicmp_l (
+extern "C" int __cdecl _memicmp_l_downlevel (
         const void * first,
         const void * last,
         size_t count,
@@ -71,6 +72,9 @@ extern "C" int __cdecl _memicmp_l (
     }
     return ( f - l );
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_memicmp_l_downlevel);
+
 #endif
 
 #if !defined(_M_IX86) || defined(_M_HYBRID_X86_ARM64)
@@ -106,22 +110,24 @@ extern "C" int __cdecl __ascii_memicmp (
 
 #endif  /* !_M_IX86 || _M_HYBRID_X86_ARM64 */
 
-//extern "C" int __cdecl _memicmp (
-//        const void * first,
-//        const void * last,
-//        size_t count
-//        )
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        /* validation section */
-//        _VALIDATE_RETURN(first != nullptr || count == 0, EINVAL, _NLSCMPERROR);
-//        _VALIDATE_RETURN(last != nullptr || count == 0, EINVAL, _NLSCMPERROR);
-//
-//        return __ascii_memicmp(first, last, count);
-//    }
-//    else
-//    {
-//        return _memicmp_l(first, last, count, nullptr);
-//    }
-//}
+#if 0
+extern "C" int __cdecl _memicmp (
+        const void * first,
+        const void * last,
+        size_t count
+        )
+{
+    if (!__acrt_locale_changed())
+    {
+        /* validation section */
+        _VALIDATE_RETURN(first != nullptr || count == 0, EINVAL, _NLSCMPERROR);
+        _VALIDATE_RETURN(last != nullptr || count == 0, EINVAL, _NLSCMPERROR);
+
+        return __ascii_memicmp(first, last, count);
+    }
+    else
+    {
+        return _memicmp_l(first, last, count, nullptr);
+    }
+}
+#endif

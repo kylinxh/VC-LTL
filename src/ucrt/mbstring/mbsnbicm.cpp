@@ -14,6 +14,7 @@
 #include <corecrt_internal_mbstring.h>
 #include <locale.h>
 #include <string.h>
+#include <msvcrt_IAT.h>
 
 #pragma warning(disable:__WARNING_POTENTIAL_BUFFER_OVERFLOW_NULLTERMINATED) // 26018
 
@@ -21,7 +22,7 @@
 * _mbsnbicmp - Compare n bytes of strings, ignoring case (MBCS)
 *
 *Purpose:
-*       Compares up to n bytes of two strings for lexical order.
+*       Compares up to n bytes of two strings for ordinal order.
 *       Strings are compared on a character basis, not a byte basis.
 *       Case of characters is not considered.
 *
@@ -41,7 +42,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-int __cdecl _mbsnbicmp_l(
+EXTERN_C int __cdecl _mbsnbicmp_l_downlevel(
         const unsigned char *s1,
         const unsigned char *s2,
         size_t n,
@@ -126,13 +127,16 @@ test:
 
         return(0);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbsnbicmp_l_downlevel);
+
 #endif
 
-//int (__cdecl _mbsnbicmp)(
-//        const unsigned char *s1,
-//        const unsigned char *s2,
-//        size_t n
-//        )
-//{
-//    return _mbsnbicmp_l(s1, s2, n, nullptr);
-//}
+/*int (__cdecl _mbsnbicmp)(
+        const unsigned char *s1,
+        const unsigned char *s2,
+        size_t n
+        )
+{
+    return _mbsnbicmp_l(s1, s2, n, nullptr);
+}*/

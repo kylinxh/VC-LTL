@@ -14,11 +14,17 @@
 #include <ehstate.h>
 #include <trnsctrl.h>
 
-#define pFrameInfoChain   (*((FRAMEINFO **)    &(__vcrt_getptd()->_pFrameInfoChain)))
-#define _ImageBase        (__vcrt_getptd()->_ImageBase)
-#define _ThrowImageBase   (__vcrt_getptd()->_ThrowImageBase)
+#if _CRT_NTDDI_MIN >= NTDDI_WIN6
+#define pFrameInfoChain   (*((FRAMEINFO **)    &(__acrt_getptd()->VistaOrLater_msvcrt._pFrameInfoChain)))
+#define _ImageBase        (__acrt_getptd()->VistaOrLater_msvcrt._ImageBase)
+#define _ThrowImageBase   (__acrt_getptd()->VistaOrLater_msvcrt._ThrowImageBase)
 #define _pForeignExcept   (*((EHExceptionRecord **)&(__vcrt_getptd()->_pForeignException)))
+#else
+#define pFrameInfoChain   (*((FRAMEINFO **)  (__LTL_GetOsMinVersion() < 0x00060000 ? &(__acrt_getptd()->XP_msvcrt._pFrameInfoChain) : \
+          &(__acrt_getptd()->VistaOrLater_msvcrt._pFrameInfoChain))))
+#endif
 
+#if 0
 extern "C" void __cdecl __FrameUnwindToState(EHRegistrationNode *, DispatcherContext *, FuncInfo *, __ehstate_t);
 
 //
@@ -57,7 +63,9 @@ EHRegistrationNode * __cdecl _GetEstablisherFrame(
     }
     return pEstablisher;
 }
+#endif
 
+#if _CRT_NTDDI_MIN >= NTDDI_WIN6
 extern "C" uintptr_t __cdecl _GetImageBase()
 {
     return _ImageBase;
@@ -77,7 +85,9 @@ extern "C" void __cdecl _SetThrowImageBase(uintptr_t NewThrowImageBase)
 {
     _ThrowImageBase = NewThrowImageBase;
 }
+#endif
 
+#if 0
 extern "C" void _MoveContext(CONTEXT* pTarget, CONTEXT* pSource)
 {
     RtlMoveMemory(pTarget, pSource, sizeof(CONTEXT));
@@ -367,6 +377,7 @@ TryBlockMapEntry* __cdecl _GetRangeOfTrysToCheck(
     else
         return FUNC_PTRYBLOCK(*pFuncInfo, *pStart, pDC->ImageBase);
 }
+#endif
 
 extern "C" FRAMEINFO * __cdecl _CreateFrameInfo(
     FRAMEINFO * pFrameInfo,
@@ -426,6 +437,7 @@ extern "C" void __cdecl _FindAndUnlinkFrame(
     DASSERT(0);
 }
 
+#if 0
 extern "C" void __cdecl _UnwindNestedFrames(
     EHRegistrationNode  *pFrame,            // Unwind up to (but not including) this frame
     EHExceptionRecord   *pExcept,           // The exception that initiated this unwind
@@ -479,3 +491,4 @@ extern "C" void __cdecl _UnwindNestedFrames(
                 &Context,
                 (PUNWIND_HISTORY_TABLE)pDC->HistoryTable);
 }
+#endif

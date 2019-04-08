@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <string.h>
+#include <msvcrt_IAT.h>
 
 #pragma warning(disable:__WARNING_POTENTIAL_BUFFER_OVERFLOW_NULLTERMINATED) // 26018 Prefast can't see that we are checking for terminal nul.
 
@@ -35,8 +36,9 @@
 *       Input parameters are validated. Refer to the validation section of the function.
 *
 *******************************************************************************/
+
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _stricmp_l (
+extern "C" int __cdecl _stricmp_l_downlevel (
         const char * dst,
         const char * src,
         _locale_t plocinfo
@@ -67,6 +69,9 @@ extern "C" int __cdecl _stricmp_l (
 
     return(f - l);
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_stricmp_l_downlevel);
+
 #endif
 
 extern "C" int __cdecl __ascii_stricmp (
@@ -88,21 +93,23 @@ extern "C" int __cdecl __ascii_stricmp (
     return(f - l);
 }
 
-//extern "C" int __cdecl _stricmp (
-//        const char * dst,
-//        const char * src
-//        )
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        /* validation section */
-//        _VALIDATE_RETURN(dst != nullptr, EINVAL, _NLSCMPERROR);
-//        _VALIDATE_RETURN(src != nullptr, EINVAL, _NLSCMPERROR);
-//
-//        return __ascii_stricmp(dst, src);
-//    }
-//    else
-//    {
-//        return _stricmp_l(dst, src, nullptr);
-//    }
-//}
+#if 0
+extern "C" int __cdecl _stricmp (
+        const char * dst,
+        const char * src
+        )
+{
+    if (!__acrt_locale_changed())
+    {
+        /* validation section */
+        _VALIDATE_RETURN(dst != nullptr, EINVAL, _NLSCMPERROR);
+        _VALIDATE_RETURN(src != nullptr, EINVAL, _NLSCMPERROR);
+
+        return __ascii_stricmp(dst, src);
+    }
+    else
+    {
+        return _stricmp_l(dst, src, nullptr);
+    }
+}
+#endif

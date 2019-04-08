@@ -13,12 +13,13 @@
 
 #include <corecrt_internal_mbstring.h>
 #include <corecrt_internal_securecrt.h>
+#include <msvcrt_IAT.h>
 
 #ifdef _ATL_XP_TARGETING
-unsigned char * __cdecl _mbstok_s_l(unsigned char *_String, const unsigned char *_Control, unsigned char **_Context, _LOCALE_ARG_DECL)
+EXTERN_C unsigned char * __cdecl _mbstok_s_l_downlevel(unsigned char *_String, const unsigned char *_Control, unsigned char **_Context, _LOCALE_ARG_DECL)
 {
-	if (!_LOCALE_ARG)
-		return _mbstok_s(_String, _Control, _Context);
+	//if (!_LOCALE_ARG)
+	//	return _mbstok_s(_String, _Control, _Context);
 
     unsigned char *token;
     const unsigned char *ctl;
@@ -147,6 +148,11 @@ unsigned char * __cdecl _mbstok_s_l(unsigned char *_String, const unsigned char 
         return token;
     }
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstok_s_l_downlevel);
+
 #endif
 
-//_REDIRECT_TO_L_VERSION_3(unsigned char *, _mbstok_s, unsigned char *, const unsigned char *, unsigned char **)
+_REDIRECT_TO_L_VERSION_3_downlevel(unsigned char *, _mbstok_s, unsigned char *, const unsigned char *, unsigned char **)
+
+_LCRT_DEFINE_IAT_SYMBOL(_mbstok_s_downlevel);

@@ -12,6 +12,7 @@
 #include <locale.h>
 #include <string.h>
 #include "..\..\winapi_thunks.h"
+#include <msvcrt_IAT.h>
 
 /***
 *int _stricoll() - Collate locale strings without regard to case
@@ -36,7 +37,7 @@
 *******************************************************************************/
 
 #ifdef _ATL_XP_TARGETING
-extern "C" int __cdecl _stricoll_l (
+extern "C" int __cdecl _stricoll_l_downlevel (
         const char *_string1,
         const char *_string2,
         _locale_t plocinfo
@@ -57,7 +58,7 @@ extern "C" int __cdecl _stricoll_l (
         return _stricmp(_string1, _string2);
     }
 
-    if ( 0 == (ret = __crtCompareStringA(plocinfo,
+    if ( 0 == (ret = __acrt_CompareStringA(plocinfo,
                     plocinfo->locinfo->lc_handle[LC_COLLATE],
                     SORT_STRINGSORT | NORM_IGNORECASE,
                     _string1,
@@ -73,20 +74,23 @@ extern "C" int __cdecl _stricoll_l (
     return (ret - 2);
 
 }
+
+_LCRT_DEFINE_IAT_SYMBOL(_stricoll_l_downlevel);
+
 #endif
 
-//extern "C" int __cdecl _stricoll (
-//        const char *_string1,
-//        const char *_string2
-//        )
-//{
-//    if (!__acrt_locale_changed())
-//    {
-//        return _stricmp(_string1, _string2);
-//    }
-//    else
-//    {
-//        return _stricoll_l(_string1, _string2, nullptr);
-//    }
-//
-//}
+/*extern "C" int __cdecl _stricoll (
+        const char *_string1,
+        const char *_string2
+        )
+{
+    if (!__acrt_locale_changed())
+    {
+        return _stricmp(_string1, _string2);
+    }
+    else
+    {
+        return _stricoll_l(_string1, _string2, nullptr);
+    }
+
+}*/

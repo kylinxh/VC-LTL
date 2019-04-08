@@ -13,6 +13,10 @@
 #include "..\..\src\winapi_thunks.h"
 #include <internal_shared.h>
 
+#ifdef _ATL_XP_TARGETING
+	//XP、2003额外需要，不然调用硬链接时会链接失败
+	#pragma comment(linker, "/defaultlib:advapi32.lib")
+#endif
 
 // Define this locally because including ntstatus.h conflicts with headers above
 #define STATUS_NOT_FOUND                 ((LONG)0xC0000225L)
@@ -157,7 +161,9 @@ extern "C" WINBASEAPI PVOID WINAPI LocateXStateFeature(
     _NO_APPLY_Vista(WaitForThreadpoolTimerCallbacks,       ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   })) \
     _NO_APPLY_Vista(CreateThreadpoolWait,                  ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   })) \
     _NO_APPLY_Vista(CloseThreadpoolTimer,                  ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   })) \
-    _NO_APPLY_Vista(CreateThreadpoolTimer,                 ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   }))
+    _NO_APPLY_Vista(CreateThreadpoolTimer,                 ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   })) \
+    _NO_APPLY_2003(GetLogicalProcessorInformation,         ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   })) \
+    _NO_APPLY_2003(GetNumaHighestNodeNumber,               ({ /*api_ms_win_core_synch_l1_2_0,*/             kernel32                                   }))
 
 namespace
 {
@@ -457,7 +463,7 @@ _ACRT_APPLY_TO_LATE_BOUND_FUNCTIONS(_APPLY)
 	//return TRUE;
 //}
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" int WINAPI __acrt_CompareStringEx(
     LPCWSTR          const locale_name,
     DWORD            const flags,
@@ -605,7 +611,7 @@ __if_exists(try_get_GetEnabledXStateFeatures)
 	}
 }
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" int WINAPI __acrt_GetLocaleInfoEx(
 	LPCWSTR const locale_name,
 	LCTYPE  const lc_type,
@@ -622,6 +628,7 @@ extern "C" int WINAPI __acrt_GetLocaleInfoEx(
 }
 #endif
 
+#if _CRT_NTDDI_MIN < NTDDI_WIN7
 extern "C" VOID WINAPI __acrt_GetSystemTimePreciseAsFileTime_advanced(LPFILETIME const system_time)
 {
 	if (auto const get_system_time_precise_as_file_time = try_get_GetSystemTimePreciseAsFileTime())
@@ -631,8 +638,9 @@ extern "C" VOID WINAPI __acrt_GetSystemTimePreciseAsFileTime_advanced(LPFILETIME
 
 	return GetSystemTimeAsFileTime(system_time);
 }
+#endif
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" int WINAPI __acrt_GetTimeFormatEx(
     LPCWSTR           const locale_name,
     DWORD             const flags,
@@ -701,7 +709,7 @@ __if_exists(try_get_InitializeCriticalSectionEx)
 	}
 }
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" BOOL WINAPI __acrt_IsValidLocaleName(LPCWSTR const locale_name)
 {
 
@@ -714,7 +722,7 @@ extern "C" BOOL WINAPI __acrt_IsValidLocaleName(LPCWSTR const locale_name)
 }
 #endif
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" int WINAPI __acrt_LCMapStringEx(
     LPCWSTR          const locale_name,
     DWORD            const flags,
@@ -736,7 +744,7 @@ extern "C" int WINAPI __acrt_LCMapStringEx(
 }
 #endif
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" int WINAPI __acrt_LCIDToLocaleName(
 	LCID   const locale,
 	LPWSTR const name,
@@ -753,7 +761,7 @@ extern "C" int WINAPI __acrt_LCIDToLocaleName(
 }
 #endif
 
-#ifdef _ATL_XP_TARGETING
+#if 0
 extern "C" LCID WINAPI __acrt_LocaleNameToLCID(
 	LPCWSTR const name,
 	DWORD   const flags
@@ -1081,45 +1089,6 @@ __if_exists(try_get_GetProcessWindowStation)
 }
 
 
-enum : int
-{
-	__crt_maximum_pointer_shift = sizeof(uintptr_t) * 8
-};
-
-static __forceinline unsigned int __crt_rotate_pointer_value(unsigned int const value, int const shift) throw()
-{
-	return RotateRight32(value, shift);
-}
-
-static __forceinline unsigned __int64 __crt_rotate_pointer_value(unsigned __int64 const value, int const shift) throw()
-{
-	return RotateRight64(value, shift);
-}
-
-
-EXTERN_C PVOID __fastcall __CRT_DecodePointer(
-	PVOID Ptr
-)
-{
-	return reinterpret_cast<PVOID>(
-		__crt_rotate_pointer_value(
-			reinterpret_cast<uintptr_t>(Ptr) ^ __security_cookie,
-			__security_cookie % __crt_maximum_pointer_shift
-		)
-		);
-}
-
-EXTERN_C PVOID __fastcall __CRT_EncodePointer(PVOID const Ptr)
-{
-	return reinterpret_cast<PVOID>(
-		__crt_rotate_pointer_value(
-			reinterpret_cast<uintptr_t>(Ptr),
-			__crt_maximum_pointer_shift - (__security_cookie % __crt_maximum_pointer_shift)
-		) ^ __security_cookie
-		);
-}
-
-
 #ifdef _ATL_XP_TARGETING
 EXTERN_C BOOL WINAPI __crtInitOnceExecuteOnce(
 	_Inout_     PINIT_ONCE    InitOnce,
@@ -1292,6 +1261,7 @@ EXTERN_C VOID WINAPI __crtAcquireSRWLockExclusive(
 }
 #endif
 
+#if _CRT_NTDDI_MIN < NTDDI_WIN7
 EXTERN_C BOOLEAN WINAPI __crtTryAcquireSRWLockExclusive(
 	_Inout_ PSRWLOCK SRWLock
 )
@@ -1309,7 +1279,7 @@ EXTERN_C BOOLEAN WINAPI __crtTryAcquireSRWLockExclusive(
 		abort();
 	}
 }
-
+#endif
 
 #ifdef _ATL_XP_TARGETING
 EXTERN_C VOID WINAPI __crtReleaseSRWLockExclusive(
@@ -1352,6 +1322,7 @@ EXTERN_C BOOL WINAPI __crtSleepConditionVariableSRW(
 }
 #endif
 
+#if _CRT_NTDDI_MIN < NTDDI_WIN7
 EXTERN_C BOOLEAN __cdecl __crt_are_win7_sync_apis_available()
 {
 
@@ -1359,6 +1330,7 @@ EXTERN_C BOOLEAN __cdecl __crt_are_win7_sync_apis_available()
 	//DYNAMICGETCACHEDFUNCTION(KERNEL32, PFNTRYACQUIRESRWLOCKEXCLUSIVE, TryAcquireSRWLockExclusive, pfTryAcquireSRWLockExclusive);
 	return try_get_TryAcquireSRWLockExclusive() != nullptr;
 }
+#endif
 
 #ifdef _ATL_XP_TARGETING
 EXTERN_C BOOLEAN __cdecl __crt_are_vista_sync_apis_available()
@@ -1473,8 +1445,8 @@ EXTERN_C DWORD WINAPI __crtGetCurrentProcessorNumber(void)
 	}
 	else
 	{
-		//如果不支持此接口，那么都假定只有一组CPU
-		return 1;
+		//如果不支持此接口，那么假定是单核
+		return 0;
 	}
 }
 
@@ -1645,6 +1617,47 @@ EXTERN_C PTP_TIMER WINAPI __crtCreateThreadpoolTimer(
 	}
 }
 
+#endif
+
+#if _CRT_NTDDI_MIN < 0x05020000
+EXTERN_C BOOL
+WINAPI
+__ltlGetLogicalProcessorInformation(
+	PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer,
+	PDWORD ReturnedLength
+    )
+{
+	if (auto pGetLogicalProcessorInformation = try_get_GetLogicalProcessorInformation())
+	{
+		return pGetLogicalProcessorInformation(Buffer, ReturnedLength);
+	}
+	else
+	{
+		SetLastError(ERROR_INVALID_FUNCTION);
+		return FALSE;
+	}
+}
+#endif
+
+#if _CRT_NTDDI_MIN < 0x05020000
+EXTERN_C BOOL
+WINAPI
+__ltlGetNumaHighestNodeNumber(
+    _Out_ PULONG HighestNodeNumber
+    )
+{
+	if (auto pGetNumaHighestNodeNumber = try_get_GetNumaHighestNodeNumber())
+	{
+		return pGetNumaHighestNodeNumber(HighestNodeNumber);
+	}
+	else
+	{
+		//不支持时始终假定只有一个NUMA节点
+		*HighestNodeNumber = 0;
+
+		return TRUE;
+	}
+}
 #endif
 
 namespace
@@ -2075,34 +2088,16 @@ namespace
 		BOOLEAN NeedDeleteFile;
 	} FILE_DISPOSITION_INFORMATION, *PFILE_DISPOSITION_INFORMATION;
 
-	EXTERN_C DWORD __LTL_GetOsMinVersion()
-	{
-		auto pPeb = ((TEB*)NtCurrentTeb())->ProcessEnvironmentBlock;
-
-		return MakeMiniVersion(pPeb->OSMajorVersion, pPeb->OSMinorVersion);
-	}
-
-
-	EXTERN_C UINT64 __LTL_GetOsVersion()
-	{
-		auto pPeb = ((TEB*)NtCurrentTeb())->ProcessEnvironmentBlock;
-
-		return MakeVersion(pPeb->OSMajorVersion, pPeb->OSMinorVersion, pPeb->OSBuildNumber, 0);
-	}
 
 	EXTERN_C NTSYSAPI
 		NTSTATUS
 		NTAPI
-		RtlAcquirePrivilege(
-			IN PULONG Privilege,
-			IN ULONG NumPriv,
-			IN ULONG Flags,
-			OUT PVOID *ReturnedState
-			);
-
-	EXTERN_C NTSYSAPI
-		NTSTATUS
-		NTAPI RtlReleasePrivilege(IN PVOID State);
+		RtlAdjustPrivilege(
+			ULONG Privilege,
+			BOOLEAN Enable,
+			BOOLEAN CurrentThread,
+			PBOOLEAN Enabled
+		);
 
 	EXTERN_C NTSYSAPI ULONG
 		NTAPI
@@ -2203,7 +2198,7 @@ namespace
 	//XP不支持CreateSymbolicLinkW，直接使用NT API实现行为
 
 
-	EXTERN_C BOOLEAN
+	EXTERN_C _LTLIMP BOOLEAN
 		WINAPI
 		__crtCreateSymbolicLinkW(
 			_In_ LPCWSTR lpSymlinkFileName,
@@ -2218,145 +2213,160 @@ namespace
 			return FALSE;
 		}
 
-		ULONG Privilege = /*SE_CREATE_SYMBOLIC_LINK_PRIVILEGE*/35;
-		PVOID OldStatus=nullptr;
-		auto lStatus = RtlAcquirePrivilege(&Privilege, 1, 0, &OldStatus);
 
-		if (lStatus<0)
-		{
-			SetLastError(RtlNtStatusToDosError(lStatus));
+		if (!ImpersonateSelf(SecurityImpersonation))
 			return FALSE;
-		}
 
-		BOOL bRet = FALSE;
+		BOOLEAN Enabled = FALSE;
 
-		//auto& pReparseData = _calloc_crt_t(byte, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
+		LSTATUS lStatus = ERROR_SUCCESS;
 
-		__crt_scoped_stack_ptr_tag<wchar_t> lpFullTargetFileName=nullptr;
-
-		UNICODE_STRING NtName = {}, NtSymlinkFileName = {};
-		bool bRelative = false;
-
-		switch (RtlDetermineDosPathNameType_U(lpTargetFileName))
+		if (auto Status = RtlAdjustPrivilege(/*SE_CREATE_SYMBOLIC_LINK_PRIVILEGE*/35, TRUE, TRUE, &Enabled))
 		{
-		case RtlPathTypeUnknown:
-		case RtlPathTypeRooted:
-		case RtlPathTypeRelative:
-			//
-			bRelative = true;
-			NtName.Buffer = (wchar_t*)lpTargetFileName;
-			NtName.Length = NtName.MaximumLength = wcslen(lpTargetFileName) * sizeof(wchar_t);
+			lStatus = RtlNtStatusToDosError(Status);
+		}
+		else
+		{
+			//auto& pReparseData = _calloc_crt_t(byte, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
 
-			break;
-		case RtlPathTypeDriveRelative:
-			if (auto cchFull = GetFullPathNameW(lpTargetFileName, 0, 0, nullptr))
+			__crt_scoped_stack_ptr_tag<wchar_t> lpFullTargetFileName = nullptr;
+
+			UNICODE_STRING NtName = {}, NtSymlinkFileName = {};
+			bool bRelative = false;
+
+			switch (RtlDetermineDosPathNameType_U(lpTargetFileName))
 			{
-				lpFullTargetFileName = (wchar_t*)_malloca(cchFull * sizeof(wchar_t));
-				if (!lpFullTargetFileName._p)
+			case RtlPathTypeUnknown:
+			case RtlPathTypeRooted:
+			case RtlPathTypeRelative:
+				//
+				bRelative = true;
+				NtName.Buffer = (wchar_t*)lpTargetFileName;
+				NtName.Length = NtName.MaximumLength = wcslen(lpTargetFileName) * sizeof(wchar_t);
+
+				break;
+			case RtlPathTypeDriveRelative:
+				if (auto cchFull = GetFullPathNameW(lpTargetFileName, 0, 0, nullptr))
 				{
-					SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+					lpFullTargetFileName = (wchar_t*)_malloca(cchFull * sizeof(wchar_t));
+					if (!lpFullTargetFileName._p)
+					{
+						lStatus = ERROR_NOT_ENOUGH_MEMORY;
+						goto _End;
+					}
+
+					lpTargetFileName = lpFullTargetFileName._p;
+				}
+
+				//case RtlPathTypeUncAbsolute:
+				//case RtlPathTypeDriveAbsolute:
+				//case RtlPathTypeLocalDevice:
+				//case RtlPathTypeRootLocalDevice:
+			default:
+				if (!RtlDosPathNameToNtPathName_U(lpTargetFileName, &NtName, nullptr, nullptr))
+				{
+					lStatus = ERROR_INVALID_PARAMETER;
+					goto _End;
+				}
+				break;
+			}
+
+			{
+				auto cbTargetFileName = wcslen(lpTargetFileName) * sizeof(wchar_t);
+
+				auto cBuffer = NtName.Length + cbTargetFileName + UFIELD_OFFSET(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer);
+
+
+				auto& pReparseData = _malloca_crt_t(BYTE, cBuffer);
+
+				if (!pReparseData._p)
+				{
+					lStatus = ERROR_NOT_ENOUGH_MEMORY;
 					goto _End;
 				}
 
-				lpTargetFileName = lpFullTargetFileName._p;
-			}
+				memset(pReparseData._p, 0, cBuffer);
 
-		//case RtlPathTypeUncAbsolute:
-		//case RtlPathTypeDriveAbsolute:
-		//case RtlPathTypeLocalDevice:
-		//case RtlPathTypeRootLocalDevice:
-		default:
-			if (!RtlDosPathNameToNtPathName_U(lpTargetFileName, &NtName, nullptr, nullptr))
-			{
-				SetLastError(ERROR_INVALID_PARAMETER);
-				goto _End;
-			}
-			break;
-		}
-
-		{
-			auto cbTargetFileName = wcslen(lpTargetFileName) * sizeof(wchar_t);
-
-			auto cBuffer = NtName.Length + cbTargetFileName + UFIELD_OFFSET(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer);
+				if (bRelative)
+					((REPARSE_DATA_BUFFER*)pReparseData._p)->SymbolicLinkReparseBuffer.Flags |= SYMLINK_FLAG_RELATIVE;
 
 
-			auto& pReparseData = _malloca_crt_t(BYTE, cBuffer);
+				((REPARSE_DATA_BUFFER*)pReparseData._p)->ReparseTag = IO_REPARSE_TAG_SYMLINK;
 
-			if (!pReparseData._p)
-			{
-				SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-				goto _End;
-			}
+				((REPARSE_DATA_BUFFER*)pReparseData._p)->ReparseDataLength = cBuffer - UFIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer);
 
-			memset(pReparseData._p, 0, cBuffer);
-
-			if (bRelative)
-				((REPARSE_DATA_BUFFER*)pReparseData._p)->SymbolicLinkReparseBuffer.Flags |= SYMLINK_FLAG_RELATIVE;
+				auto& SymbolicLinkReparseBuffer = ((REPARSE_DATA_BUFFER*)pReparseData._p)->SymbolicLinkReparseBuffer;
 
 
-			((REPARSE_DATA_BUFFER*)pReparseData._p)->ReparseTag = IO_REPARSE_TAG_SYMLINK;
+				SymbolicLinkReparseBuffer.SubstituteNameOffset = SymbolicLinkReparseBuffer.PrintNameLength = wcslen(lpTargetFileName) * sizeof(wchar_t);
+				SymbolicLinkReparseBuffer.SubstituteNameLength = NtName.Length;
 
-			((REPARSE_DATA_BUFFER*)pReparseData._p)->ReparseDataLength = cBuffer - UFIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer);
-
-			auto& SymbolicLinkReparseBuffer = ((REPARSE_DATA_BUFFER*)pReparseData._p)->SymbolicLinkReparseBuffer;
-
-
-			SymbolicLinkReparseBuffer.SubstituteNameOffset = SymbolicLinkReparseBuffer.PrintNameLength = wcslen(lpTargetFileName) * sizeof(wchar_t);
-			SymbolicLinkReparseBuffer.SubstituteNameLength = NtName.Length;
-
-			memcpy(SymbolicLinkReparseBuffer.PathBuffer, lpTargetFileName, SymbolicLinkReparseBuffer.PrintNameLength);
-			memcpy((byte*)(SymbolicLinkReparseBuffer.PathBuffer) + SymbolicLinkReparseBuffer.PrintNameLength, NtName.Buffer, NtName.Length);
+				memcpy(SymbolicLinkReparseBuffer.PathBuffer, lpTargetFileName, SymbolicLinkReparseBuffer.PrintNameLength);
+				memcpy((byte*)(SymbolicLinkReparseBuffer.PathBuffer) + SymbolicLinkReparseBuffer.PrintNameLength, NtName.Buffer, NtName.Length);
 
 
-			
 
-			if (RtlDosPathNameToNtPathName_U(lpSymlinkFileName, &NtSymlinkFileName, nullptr, nullptr))
-			{
-				HANDLE hFile;
 
-				OBJECT_ATTRIBUTES ObjectAttributes = {sizeof(OBJECT_ATTRIBUTES),nullptr,&NtSymlinkFileName ,/*OBJ_CASE_INSENSITIVE*/0x40};
-				IO_STATUS_BLOCK IoStatusBlock;
-
-				lStatus = NtCreateFile(&hFile, FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | DELETE, &ObjectAttributes, &IoStatusBlock, nullptr, FILE_ATTRIBUTE_NORMAL, 0, /*FILE_CREATE*/2, (dwFlags&SYMBOLIC_LINK_FLAG_DIRECTORY) ? 0x200021 : 0x200060, nullptr, 0);
-				if (lStatus < 0)
+				if (RtlDosPathNameToNtPathName_U(lpSymlinkFileName, &NtSymlinkFileName, nullptr, nullptr))
 				{
-					SetLastError(RtlNtStatusToDosError(lStatus));
+					HANDLE hFile;
+
+					OBJECT_ATTRIBUTES ObjectAttributes = { sizeof(OBJECT_ATTRIBUTES),nullptr,&NtSymlinkFileName ,/*OBJ_CASE_INSENSITIVE*/0x40 };
+					IO_STATUS_BLOCK IoStatusBlock;
+
+					Status = NtCreateFile(&hFile, FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | DELETE, &ObjectAttributes, &IoStatusBlock, nullptr, FILE_ATTRIBUTE_NORMAL, 0, /*FILE_CREATE*/2, (dwFlags&SYMBOLIC_LINK_FLAG_DIRECTORY) ? 0x200021 : 0x200060, nullptr, 0);
+					if (Status < 0)
+					{
+						lStatus = RtlNtStatusToDosError(Status);
+					}
+					else
+					{
+						DWORD cRet;
+
+						if (!DeviceIoControl(hFile, FSCTL_SET_REPARSE_POINT, pReparseData._p, cBuffer, NULL, NULL, &cRet, NULL))
+						{
+							lStatus = GetLastError();
+
+							if (lStatus == ERROR_SUCCESS)
+								lStatus = ERROR_INVALID_FUNCTION;
+
+							//设置失败则删除创建的文件
+							FILE_DISPOSITION_INFORMATION DispositionInformation;
+							DispositionInformation.NeedDeleteFile = TRUE;
+							NtSetInformationFile(hFile, &IoStatusBlock, &DispositionInformation, sizeof(DispositionInformation), FileDispositionInformation);
+						}
+
+
+						NtClose(hFile);
+					}
+
+					RtlFreeUnicodeString(&NtSymlinkFileName);
 				}
 				else
 				{
-					DWORD cRet;
-					bRet = DeviceIoControl(hFile, FSCTL_SET_REPARSE_POINT, pReparseData._p, cBuffer, NULL, NULL, &cRet, NULL);
-					if (!bRet)
-					{
-						//设置失败则删除创建的文件
-						FILE_DISPOSITION_INFORMATION DispositionInformation;
-						DispositionInformation.NeedDeleteFile = TRUE;
-						NtSetInformationFile(hFile, &IoStatusBlock, &DispositionInformation, sizeof(DispositionInformation), FileDispositionInformation);
-					}
-
-
-					NtClose(hFile);
+					lStatus = ERROR_INVALID_PARAMETER;
 				}
 
-				RtlFreeUnicodeString(&NtSymlinkFileName);
+
+				if (!bRelative)
+					RtlFreeUnicodeString(&NtName);
+
 			}
-			else
-			{
-				SetLastError(ERROR_INVALID_PARAMETER);
-			}
-
-
-			if (!bRelative)
-				RtlFreeUnicodeString(&NtName);
-
 		}
-
 
 	_End:
 
-		RtlReleasePrivilege(OldStatus);
+		RevertToSelf();
 
-		return bRet;
+		if (lStatus)
+		{
+			SetLastError(lStatus);
+			return FALSE;
+		}
+		else
+		{
+			return TRUE;
+		}
 	}
 #endif
 }
